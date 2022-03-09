@@ -1,6 +1,6 @@
 # ArcClimate
 
-ArcClimate (hereinafter referred to as "AC") is based on a mesoscale numerical prediction model (hereinafter referred to as "MSM") produced by the Japan Meteorological Agency for temperature, humidity, horizontal full-sky solar radiation, downward atmospheric radiation, wind direction and wind speed, which are necessary for estimating the heat load of buildings, and can be used to estimate the heat load of any specified building through elevation correction and spatial interpolation. The program produces a meteorological data set for design purposes for a location.
+ArcClimate (hereafter referred to as "AC") is a program that creates a design meteorological data set for any specified point, such as temperature, humidity, horizontal surface all-sky radiation, downward atmospheric radiation, wind direction and wind speed, necessary for estimating the heat load of a building, based on the mesoscale numerical prediction model (hereafter referred to as "MSM") produced by the Japan Meteorological Agency, by applying elevation correction and spatial interpolation.
 
 AC automatically downloads the data necessary to create a specified arbitrary point from data that has been pre-calculated and stored in the cloud (hereinafter referred to as "basic data set"), and creates a design meteorological data set for an arbitrary point by performing spatial interpolation calculations on these data.
 
@@ -29,8 +29,8 @@ $ arcclimate 36.1290111 140.0754174 -o kenken_EA.csv --mode EA
 
 You can specify any longitude and latitude in Japan.
 The latitude and longitude of an arbitrary point can be obtained from GoogleMap or other sources.
-For example, if you search for the National Research Institute for Architectural Science in GoogleMap, the URL will be
-``https://www.google.co.jp/maps/place/国立研究開発法人建築研究/@36.1290111,140.0754174.... The result will be something like ````.
+For example, if you search for the Building Reserch Institute in GoogleMap, you can get the URL as below,
+`https://www.google.co.jp/maps/place/国立研究開発法人建築研究/@36.1290111,140.0754174....` .
 In this URL, 36.1290111 is latitude and 140.0754174 is longitude.
 
 Enter the latitude and longitude information obtained on the command line and run the program.
@@ -44,16 +44,16 @@ The results are saved in `weather.csv`.
 ## Output CSV items
 
 1. date ... Reference time. JST (Japan Standard Time). Except for the average year, which is displayed as 1970.
-2. tmp ... Instantaneous value of temperature at the reference time (unit: °C)
-3. MR ... Instantaneous value of absolute humidity by weight at the reference time (unit: g/kgDA)
-4. DSWRF_est ... Estimated total solar radiation for the hour before the reference time (unit: MJ/m2)
-5. DSWRF_msm ... Totalized solar radiation for the hour before the reference time (unit: MJ/m2)
-6. Ld ... Total downward atmospheric radiation for the hour before the reference time (unit: MJ/m2)
-7. VGRD ... North-south wind (V-axis) (unit: m/s)
-8. UGRD ... East-west wind (U-axis) (unit: m/s)
-9. PRES ... Barometric pressure (unit: hPa)
-10. APCP01 ... Accumulated precipitation for the hour before the reference time (unit: mm/h)
-11. w_spd ... Instantaneous wind speed at the reference time (unit: m/s)
+2. TMP ... Instantaneous value of temperature at the reference time (unit: °C)
+3. MR ... Instantaneous value of mass absolute humidity (humidity ratio) at the reference time (unit: g/kg(DA))
+4. DSWRF_est ... Hourly integrated value of estimated solar radiation before the reference time (unit: MJ/m2)
+5. DSWRF_msm ... Hourly integrated value of solar radiation before the reference time (unit: MJ/m2)
+6. Ld ... Hourly integrated value of downward atmospheric radiation before the reference time (unit: MJ/m2)
+7. VGRD ... North-south component (V-axis) of wind speed (unit: m/s)
+8. UGRD ... East-west component (U-axis) of wind speed (unit: m/s)
+9. PRES ... Atmospheric pressure (unit: hPa)
+10. APCP01 ... Hourly integrated value of precipitation before the reference time (unit: mm/h)
+11. w_spd ... Instantaneous value of wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
 
 ## Author
