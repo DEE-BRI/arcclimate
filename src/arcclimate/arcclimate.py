@@ -3,6 +3,7 @@ import argparse
 import datetime as dt
 import logging
 import numpy as np
+import io
 import os
 import sys
 import pandas as pd
@@ -298,6 +299,56 @@ def init(
     }
 
 
+def to_epw(df: pd.DataFrame, out, lat, lon):
+
+    #TODO: 動作検証
+    #ref: https://bigladdersoftware.com/epx/docs/8-3/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html#energyplus-weather-file-epw-data-dictionary
+
+    # LOCATION
+    # 国名,緯度,経度,タイムゾーンのみ出力
+    out.write("LOCATION,-,-,JPN,-,-,{},{},9.0,\n".format(lat, lon))
+
+    # DESIGN CONDITION
+    # 設計条件なし
+    out.write("DESIGN CONDITIONS,0\n")
+
+    # TYPICAL/EXTREME PERIODS
+    # 期間指定なし
+    out.write("TYPICAL/EXTREME PERIODS,0\n")
+
+    # GROUND TEMPERATURES
+    # 地中温度無し
+    out.write("GROUND TEMPERATURES,0\n")
+
+    # HOLIDAYS/DAYLIGHT SAVINGS
+    # 休日/サマータイム---TODO:要確認
+    out.write("HOLIDAYS/DAYLIGHT SAVINGS\n")
+
+    # COMMENT 1
+    out.write("COMMENTS 1\n")
+
+    # COMMENT 2
+    out.write("COMMENTS 2\n")
+
+    # DATA HEADER
+    out.write("DATA PERIODS,0\n")
+
+    for index, row in df.iterrows():
+        # N1: 年
+        # N2: 月
+        # N3: 日
+        # N4: 時
+        # N5: 分 = 0
+        # N6: Dry Bulb Temperature
+        # N7-N19: missing
+        # N20: w_dir
+        # N21: w_spd
+        # N22-N32: missing
+        # N33: APCP01
+        # N34: missing
+        out.write("{},{},{},{},0,-,{},,,,,,,,,,,,,,{},{},,,,,,,,,,,,{},\n".format(index.year, index.month, index.day, index.hour, row['TMP'], row['w_dir'], row['w_spd'], row['APCP01']))
+
+
 def main():
     # コマンドライン引数の処理
     parser = argparse.ArgumentParser()
@@ -334,6 +385,12 @@ def main():
         choices=["normal", "EA"],
         default="normal",
         help="計算モードの指定 標準=normal(デフォルト), 標準年=EA"
+    )
+    parser.add_argument(
+        "-f",
+        choices=["CSV", "EPW"],
+        default="CSV",
+        help="出力形式 CSV or EPW"
     )
     parser.add_argument(
         "--mode_elevation",
@@ -408,11 +465,19 @@ def main():
     )
 
     # 保存
+    out = io.StringIO()
+    if args.f == "CSV":
+        df_save.to_csv(out)
+    elif args.f == "EPW":
+        # TODO: 標高を引き渡す
+        to_epw(df_save, out, args.lat, args.lon)
+
     if args.out is None:
-        print(df_save.to_csv())
+        print(out.getvalue())
     else:
         logging.info('CSV保存: {}'.format(args.out))
-        df_save.to_csv(args.out)
+        with open(args.out, mode='w') as f:
+            print(out.getvalue(), file=f)
 
     logging.info('計算が終了しました')
 
