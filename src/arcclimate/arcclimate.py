@@ -376,8 +376,6 @@ def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
       それ以外の値については、"missing"に該当する値を出力します。
     """   
 
-    #ref: https://bigladdersoftware.com/epx/docs/8-3/auxiliary-programs/energyplus-weather-file-epw-data-dictionary.html#energyplus-weather-file-epw-data-dictionary
-
     # LOCATION
     # 国名,緯度,経度,タイムゾーンのみ出力
     out.write("LOCATION,-,-,JPN,-,-,{:.2f},{:.2f},9.0,0.0\n".format(lat, lon))
