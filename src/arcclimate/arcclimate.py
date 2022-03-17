@@ -299,6 +299,72 @@ def init(
     }
 
 
+def to_has(df: pd.DataFrame, out):
+    # 7行ごとに1日, 1行に1時間ごと24列, 1列あたり3文字で表現
+    #--------------------
+    # 1行目=外気温 (×0.1℃-50℃)
+    # 2行目=絶対湿度 (0.1g/kg(DA))
+    # 3行目=法線面直達日射量 (0.01MJ/m2h or kcal/m2h)
+    # 4行目=水平面天空日射量 (0.01MJ/m2h or kcal/m2h)
+    # 5行目=水平面夜間日射量 (0.01MJ/m2h or kcal/m2h or 雲量(1-9))
+    # 6行目=風向 (0:無風,1:NNE,...,16:N)
+    # 7行目=風速 (0.1m/s)
+    # ref: https://gist.github.com/kinonotofu/a3a8d203286840684f95c274d1821909
+
+    # 外気温
+    TMP = (df['TMP'].to_numpy().reshape((24, 365)) * 10 + 50).astype(np.int)
+
+    # 絶対湿度
+    MR = (df['MR'].to_numpy().reshape((24, 365)) * 10).astype(np.int)
+
+    # 風速
+    w_spd = (df['w_spd'].to_numpy().reshape((24, 365)) * 10).astype(np.int)
+
+    # 風向 (0, 22.5, 45...) => (0, 1, 2...)
+    w_dir = (df['w_spd'].to_numpy().reshape((24, 365)) / 22.5).astype(np.int) + 1
+    w_dir[w_dir == 0] = 16 #真北の場合を0から16へ変更
+    w_dir[w_spd == 0] = 0 #無風の場合は0
+
+    # 年	月	日	曜日
+    year = df.index.year % 100
+    month = df.index.month
+    day = df.index.day
+    weekday = df.index.weekday.to_numpy() + 2 #月2,...,日8
+    weekday[weekday == 8] = 1 #日=>1
+    # 祝日は処理していない
+
+
+    for d in range(365):
+
+        # 2列	2列	2列	1列
+        # 年	月	日	曜日
+        off = d * 24
+        day_signature = "{:2d}{:2d}{:2d}{:1d}".format(year[off], month[off], day[off], weekday[off])
+
+        # 外気温
+        out.write(("{:3d}"*24).format(*TMP[:,d]))
+        out.write("{}1\n".format(day_signature))
+
+        # 絶対湿度
+        out.write(("{:3d}"*24).format(*MR[:,d]))
+        out.write("{}2\n".format(day_signature))
+
+        # 日射量
+        out.write(("  0"*24 + "{}3\n").format(day_signature))
+        out.write(("  0"*24 + "{}4\n").format(day_signature))
+        out.write(("  0"*24 + "{}5\n").format(day_signature))
+
+        # 風向
+        out.write(("{:3d}"*24).format(*w_dir[:,d]))
+        out.write("{}7\n".format(day_signature))
+
+        # 風速
+        out.write(("{:3d}"*24).format(*w_spd[:,d]))
+        out.write("{}7\n".format(day_signature))
+
+
+
+
 def to_epw(df: pd.DataFrame, out, lat, lon):
 
     #TODO: 動作検証
@@ -388,9 +454,9 @@ def main():
     )
     parser.add_argument(
         "-f",
-        choices=["CSV", "EPW"],
+        choices=["CSV", "EPW", "HAS"],
         default="CSV",
-        help="出力形式 CSV or EPW"
+        help="出力形式 CSV, EPW or HAS"
     )
     parser.add_argument(
         "--mode_elevation",
@@ -471,6 +537,8 @@ def main():
     elif args.f == "EPW":
         # TODO: 標高を引き渡す
         to_epw(df_save, out, args.lat, args.lon)
+    elif args.f == "HAS":
+        to_has(df_save, out)
 
     if args.out is None:
         print(out.getvalue())
