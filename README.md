@@ -56,6 +56,15 @@ The results are saved in `weather.csv`.
 11. w_spd ... Instantaneous wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
 
+Weather data (.has) for [HASP](https://www.jabmee.or.jp/hasp/) can also be output.
+The output weather data for HASP will reflect only the values for outside temperature (unit: °C), absolute humidity (unit: g/kgDA), wind direction (16 directions), and wind speed (unit: m/s).
+Zero is output for normal surface direct irradiance, horizontal surface sky irradiance, and horizontal surface nighttime irradiance.
+
+Weather data (.epw) for [EnergyPlus](https://energyplus.net/) can also be output.
+However, only the outside temperature (unit: °C), wind direction (unit: °), wind speed (unit: m/s), and total precipitation (unit: mm/h) are output.
+
+When generating weather data for HASP or EnergyPlus, please add command line options like `-f HAS` or `-f EPW`.
+
 ## Author
 
 ArcClimate Development Team
