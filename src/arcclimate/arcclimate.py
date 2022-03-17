@@ -372,7 +372,7 @@ def to_epw(df: pd.DataFrame, out, lat, lon):
 
     # LOCATION
     # 国名,緯度,経度,タイムゾーンのみ出力
-    out.write("LOCATION,-,-,JPN,-,-,{},{},9.0,\n".format(lat, lon))
+    out.write("LOCATION,-,-,JPN,-,-,{:.2f},{:.2f},9.0,0.0\n".format(lat, lon))
 
     # DESIGN CONDITION
     # 設計条件なし
@@ -387,8 +387,8 @@ def to_epw(df: pd.DataFrame, out, lat, lon):
     out.write("GROUND TEMPERATURES,0\n")
 
     # HOLIDAYS/DAYLIGHT SAVINGS
-    # 休日/サマータイム---TODO:要確認
-    out.write("HOLIDAYS/DAYLIGHT SAVINGS\n")
+    # 休日/サマータイム
+    out.write("HOLIDAYS/DAYLIGHT SAVINGS,No,0,0,0\n")
 
     # COMMENT 1
     out.write("COMMENTS 1\n")
@@ -397,7 +397,7 @@ def to_epw(df: pd.DataFrame, out, lat, lon):
     out.write("COMMENTS 2\n")
 
     # DATA HEADER
-    out.write("DATA PERIODS,0\n")
+    out.write("DATA PERIODS,1,1,Data,Sunday,1/1,12/31\n")
 
     for index, row in df.iterrows():
         # N1: 年
@@ -412,7 +412,7 @@ def to_epw(df: pd.DataFrame, out, lat, lon):
         # N22-N32: missing
         # N33: APCP01
         # N34: missing
-        out.write("{},{},{},{},0,-,{},,,,,,,,,,,,,,{},{},,,,,,,,,,,,{},\n".format(index.year, index.month, index.day, index.hour, row['TMP'], row['w_dir'], row['w_spd'], row['APCP01']))
+        out.write("{},{},{},{},60,-,{:.1f},99.9,999,999999,999,9999,9999,9999,9999,9999,999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(index.year, index.month, index.day, index.hour+1, row['TMP'], int(row['w_dir']), row['w_spd'], row['APCP01']))
 
 
 def main():
