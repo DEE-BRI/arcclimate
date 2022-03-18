@@ -3,6 +3,7 @@ import argparse
 import datetime as dt
 import logging
 import numpy as np
+import io
 import os
 import sys
 import pandas as pd
@@ -298,6 +299,128 @@ def init(
     }
 
 
+def to_has(df: pd.DataFrame, out: io.StringIO):
+    """HASP形式への変換
+
+    Args:
+      df(pd.DataFrame): MSMデータフレーム
+      out(io.StringIO): 出力先のテキストストリーム
+
+    Note:
+      法線面直達日射量、水平面天空日射量、水平面夜間日射量は0を出力します。
+      曜日の祝日判定を行っていません。
+    """
+    # 外気温 (×0.1℃-50℃)
+    TMP = (df['TMP'].to_numpy().reshape((24, 365)) * 10 + 50).astype(int)
+
+    # 絶対湿度 (0.1g/kg(DA))
+    MR = (df['MR'].to_numpy().reshape((24, 365)) * 10).astype(int)
+
+    # 風速 (0.1m/s)
+    w_spd = (df['w_spd'].to_numpy().reshape((24, 365)) * 10).astype(int)
+
+    # 風向 (0:無風,1:NNE,...,16:N)
+    w_dir = (df['w_spd'].to_numpy().reshape((24, 365)) / 22.5).astype(int) + 1
+    w_dir[w_dir == 0] = 16  # 真北の場合を0から16へ変更
+    w_dir[w_spd == 0] = 0  # 無風の場合は0
+
+    # 年,月,日,曜日
+    year = df.index.year % 100
+    month = df.index.month
+    day = df.index.day
+    weekday = df.index.weekday.to_numpy() + 2  # 月2,...,日8
+    weekday[weekday == 8] = 1  # 日=>1
+    # 注)祝日は処理していない
+
+    for d in range(365):
+
+        # 2列	2列	2列	1列
+        # 年	月	日	曜日
+        off = d * 24
+        day_signature = "{:2d}{:2d}{:2d}{:1d}".format(year[off], month[off], day[off], weekday[off])
+
+        # 外気温
+        out.write(("{:3d}"*24).format(*TMP[:,d]))
+        out.write("{}1\n".format(day_signature))
+
+        # 絶対湿度
+        out.write(("{:3d}"*24).format(*MR[:,d]))
+        out.write("{}2\n".format(day_signature))
+
+        # 日射量
+        out.write(("  0"*24 + "{}3\n").format(day_signature))
+        out.write(("  0"*24 + "{}4\n").format(day_signature))
+        out.write(("  0"*24 + "{}5\n").format(day_signature))
+
+        # 風向
+        out.write(("{:3d}"*24).format(*w_dir[:,d]))
+        out.write("{}7\n".format(day_signature))
+
+        # 風速
+        out.write(("{:3d}"*24).format(*w_spd[:,d]))
+        out.write("{}7\n".format(day_signature))
+
+
+def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
+    """初期化処理
+
+    Args:
+      df(pd.DataFrame): MSMデータフレーム
+      out(io.StringIO): 出力先のテキストストリーム
+      lat(float): 推計対象地点の緯度（10進法）
+      lon(float): 推計対象地点の経度（10進法）
+
+    Note:
+      "EnergyPlus Auxilary Programs"を参考に記述されました。
+      外気温(単位:℃)、風向(単位:°)、風速(単位:m/s)、降水量の積算値(単位:mm/h)のみを出力します。
+      それ以外の値については、"missing"に該当する値を出力します。
+    """   
+
+    # LOCATION
+    # 国名,緯度,経度,タイムゾーンのみ出力
+    out.write("LOCATION,-,-,JPN,-,-,{:.2f},{:.2f},9.0,0.0\n".format(lat, lon))
+
+    # DESIGN CONDITION
+    # 設計条件なし
+    out.write("DESIGN CONDITIONS,0\n")
+
+    # TYPICAL/EXTREME PERIODS
+    # 期間指定なし
+    out.write("TYPICAL/EXTREME PERIODS,0\n")
+
+    # GROUND TEMPERATURES
+    # 地中温度無し
+    out.write("GROUND TEMPERATURES,0\n")
+
+    # HOLIDAYS/DAYLIGHT SAVINGS
+    # 休日/サマータイム
+    out.write("HOLIDAYS/DAYLIGHT SAVINGS,No,0,0,0\n")
+
+    # COMMENT 1
+    out.write("COMMENTS 1\n")
+
+    # COMMENT 2
+    out.write("COMMENTS 2\n")
+
+    # DATA HEADER
+    out.write("DATA PERIODS,1,1,Data,Sunday,1/1,12/31\n")
+
+    for index, row in df.iterrows():
+        # N1: 年
+        # N2: 月
+        # N3: 日
+        # N4: 時
+        # N5: 分 = 0
+        # N6: Dry Bulb Temperature
+        # N7-N19: missing
+        # N20: w_dir
+        # N21: w_spd
+        # N22-N32: missing
+        # N33: APCP01
+        # N34: missing
+        out.write("{},{},{},{},60,-,{:.1f},99.9,999,999999,999,9999,9999,9999,9999,9999,999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(index.year, index.month, index.day, index.hour+1, row['TMP'], int(row['w_dir']), row['w_spd'], row['APCP01']))
+
+
 def main():
     # コマンドライン引数の処理
     parser = argparse.ArgumentParser()
@@ -334,6 +457,12 @@ def main():
         choices=["normal", "EA"],
         default="normal",
         help="計算モードの指定 標準=normal(デフォルト), 標準年=EA"
+    )
+    parser.add_argument(
+        "-f",
+        choices=["CSV", "EPW", "HAS"],
+        default="CSV",
+        help="出力形式 CSV, EPW or HAS"
     )
     parser.add_argument(
         "--mode_elevation",
@@ -408,11 +537,20 @@ def main():
     )
 
     # 保存
+    out = io.StringIO()
+    if args.f == "CSV":
+        df_save.to_csv(out)
+    elif args.f == "EPW":
+        to_epw(df_save, out, args.lat, args.lon)
+    elif args.f == "HAS":
+        to_has(df_save, out)
+
     if args.out is None:
-        print(df_save.to_csv())
+        print(out.getvalue())
     else:
         logging.info('CSV保存: {}'.format(args.out))
-        df_save.to_csv(args.out)
+        with open(args.out, mode='w') as f:
+            print(out.getvalue(), file=f)
 
     logging.info('計算が終了しました')
 
