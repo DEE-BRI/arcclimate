@@ -424,30 +424,29 @@ def _smooth_month_gaps(after_month: int, before_year: int, after_year: int, df_t
     # 2月と3月の結合（うるう年の回避）
     elif after_month == 3:
 
-        # 前月の代表年における2月28日18時
+        # 結合する2つの月の若い月（前月）の代表年における2月28日18時（はじまり）
         before_start = dt.datetime(year=int(before_year), month=2, day=28, hour=18)
 
-        # 前月の代表年における2月28日24時
+        # 前月の代表年における3月1日6時（おわり）
         before_end = before + dt.timedelta(hours=6)
 
-        # 前月の代表年における2月28日18時から2月28日24時のMSMデータフレーム
+        # 前月の代表年における2月28日18時から3月1日6時までのMSMデータフレーム
         df_before = df_temp.loc[before_start:before_end, :].copy()
 
-        # 対象月の代表年の2月28日18時
+        # 結合する2つの月の遅い月（対象月）の代表年における2月28日18時（はじまり）
         after_start = dt.datetime(year=int(after_year), month=2, day=28, hour=18)
 
-        # 対象月の代表年の2月28日24時
+        # 対象月の代表年における3月1日6時（おわり）
         after_end = after + dt.timedelta(hours=6)
 
-        # 対象月の代表年の2月28日18時から2月28日24時のMSMデータフレーム
+        # 対象月の代表年における2月28日18時から3月1日6時までのMSMデータフレーム
         df_after = df_temp.loc[after_start:after_end, :].copy()
 
         # MSMデータフレームから2月29日を除外
-        # TODO: 要確認。この時点ですでに29日が排除されているように思われる。
         df_before = df_before[df_before.index.day != 29]
         df_after = df_after[df_after.index.day != 29]
 
-        # 対象月の1970年における対象月の1日の前日18時から翌日11時まで
+        # 対象月の1970年における対象月の1日の前日18時から翌日6時まで
         timestamp = pd.date_range(
             center + dt.timedelta(hours=-6), periods=13, freq="H")
 
@@ -470,7 +469,7 @@ def _smooth_month_gaps(after_month: int, before_year: int, after_year: int, df_t
         # 対象月の代表年における対象月の1日の前月末日18時から1日6時までのMSMデータフレーム
         df_after = df_temp.loc[after_start:after_end, :].copy()
 
-        # 対象月の1970年における対象月の1日の前日18時から翌日11時まで
+        # 対象月の1970年における対象月の1日の前日18時から翌日6時まで
         timestamp = pd.date_range(
             center + dt.timedelta(hours=-6), periods=13, freq="H")
 
