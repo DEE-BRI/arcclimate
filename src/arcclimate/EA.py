@@ -7,7 +7,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 from typing import List, Tuple, Generator
-from dateutil.relativedelta import relativedelta
+from datetime import timedelta
 
 
 def calc_EA(df: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
@@ -314,12 +314,15 @@ def _make_EA(df: pd.DataFrame, rep_years: List[int]) -> pd.DataFrame:
     """
     df_EA = pd.DataFrame()
 
+    # 月日数
+    mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+
     # 月別に代表的な年のデータを抜き出す
     for month, year in enumerate(rep_years, 1):
 
         # 当該代表年月の開始日とその次月開始日
         start_date = dt.datetime(int(year), month, 1)
-        end_date = start_date + relativedelta(months=1)
+        end_date = start_date + timedelta(days=mdays[month-1])
 
         # 抜き出した代表データ
         df_temp = df[(start_date <= df.index) & (
