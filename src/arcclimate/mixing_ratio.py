@@ -18,11 +18,11 @@ def get_corrected_mixing_ratio(
     Returns:
       np.ndarray: 重量絶対湿度の標高補正後のMR [g/kg(DA)]
     """
-    # (最低)重量絶対湿度 [g/kg(DA)]
-    MR_min = get_mixing_ratio(PRES, TMP)
+    #  飽和水蒸気量（重量絶対湿度） [g/kg(DA)]
+    MR_sat = get_mixing_ratio(PRES, TMP)
 
     # 重量絶対湿度の補正
-    MR_corr = np.maximum(MR, MR_min)
+    MR_corr = np.minimum(MR, MR_sat) # 飽和水蒸気量（重量絶対湿度）を最大とする
 
     return MR_corr
 
