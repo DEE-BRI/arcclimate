@@ -18,6 +18,8 @@ from mixing_ratio import get_corrected_mixing_ratio
 from wind import get_wind16
 from temperature import get_corrected_TMP
 from pressure import get_corrected_PRES
+from relative_humidity import func_RH_eSAT, func_DT_0, func_DT_50
+from solar_separation import get_separate
 
 
 def interpolate(
@@ -31,7 +33,8 @@ def interpolate(
     mode_elevation='api',
     mode="normal",
     use_est=True,
-    vector_wind=False
+    vector_wind=False,
+    mode_separate='Perez'
 ) -> pd.DataFrame:
     """対象地点の周囲のMSMデータを利用して空間補間計算を行う
 
@@ -61,14 +64,12 @@ def interpolate(
         msms=msms,
         msm_elevation_master=msm_elevation_master,
         mesh_elevation_master=mesh_elevation_master,
-        mode_elevation=mode_elevation
+        mode_elevation=mode_elevation,
+        mode_separate=mode_separate
     )
 
     # ベクトル風速から16方位の風向風速を計算
     _convert_wind16(msm)
-
-    # 大気放射量の単位をMJ/m2に換算
-    _convert_Ld_w_to_mj(msm)
 
     if mode == "normal":
         # 保存用に年月日をフィルタ
@@ -81,15 +82,12 @@ def interpolate(
         # 標準年の計算
         from EA import calc_EA
         df_save, select_year = calc_EA(msm,
-                                       start_year=start_year,
-                                       end_year=end_year,
-                                       use_est=use_est)
+        start_year=start_year,
+        end_year=end_year,
+        use_est=use_est)
 
-        # ベクトル風速から16方位の風向風速を計算
+        # ベクトル風速から16方位の風向風速を再計算
         _convert_wind16(df_save)
-
-        # 大気放射量の単位をMJ/m2に換算
-        _convert_Ld_w_to_mj(df_save)
 
     else:
         raise ValueError(mode)
@@ -107,7 +105,8 @@ def _get_interpolated_msm(
     msms: Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame],
     msm_elevation_master: pd.DataFrame,
     mesh_elevation_master: pd.DataFrame,
-    mode_elevation: Optional[str] = 'api'
+    mode_elevation: Optional[str] = 'api',
+    mode_separate:str ='Perez'
 ) -> pd.DataFrame:
     """標高補正
 
@@ -147,6 +146,17 @@ def _get_interpolated_msm(
         elevations=elevations,
         ele_target=ele_target
     )
+    # 相対湿度・飽和水蒸気圧・露点温度の計算
+    _get_relative_humidity(msm_target)
+
+    # 水平面全天日射量の直散分離
+    msm_target = get_separate(msm_target,lat,lon,ele_target,mode_separate)
+
+    # 大気放射量の単位をMJ/m2に換算
+    _convert_Ld_w_to_mj(msm_target)
+
+    # 夜間放射量の計算
+    _get_Nocturnal_Radiation(msm_target)
 
     return msm_target
 
@@ -223,7 +233,7 @@ def _get_corrected_msm(msm: pd.DataFrame, elevation: float, ele_target: float):
     msm['MR'] = MR_corr
 
     # なぜ 気圧消すのか？
-    msm.drop(['PRES'], axis=1, inplace=True)
+    # msm.drop(['PRES'], axis=1, inplace=True)
 
     return msm
 
@@ -245,13 +255,48 @@ def _convert_wind16(msm: pd.DataFrame):
     msm['w_dir'] = w_dir16
 
 
-def _convert_Ld_w_to_mj(msm: pd.DataFrame):
+def _convert_Ld_w_to_mj(msm_target: pd.DataFrame):
     """大気放射量の単位をW/m2からMJ/m2に換算
 
     Args:
       df(pd.DataFrame): MSMデータフレーム
     """
-    msm['Ld'] = msm['Ld'] * (3.6/1000)
+    msm_target['Ld'] = msm_target['Ld'] * (3.6/1000)
+
+
+def _get_Nocturnal_Radiation(msm_target: pd.DataFrame):
+    """夜間放射量[MJ/m2]の計算
+    Args:
+    df(pd.DataFrame): MSMデータフレーム
+    """
+    sigma = 5.67*10**-8 # シュテファン-ボルツマン定数[W/m2・K4]
+    msm_target['NR'] = ((sigma * (msm_target['TMP']+273.15)**4) * (3600 * 10**-6)) - msm_target['Ld']
+
+
+def _get_relative_humidity(msm_target:pd.DataFrame):
+    """相対湿度、飽和水蒸気圧、露点温度の計算
+      msm(pd.DataFrame): MSMデータフレーム
+    """
+
+    MR = msm_target['MR'].values
+    PRES = msm_target['PRES'].values
+    TMP = msm_target['TMP'].values
+
+    RH,Pw = func_RH_eSAT(MR, TMP, PRES)
+
+    msm_target["RH"] = RH
+    msm_target["Pw"] = Pw
+    
+    # 露点温度が計算できない場合にはnanとする
+    msm_target["DT"] = np.nan
+
+    # 水蒸気分圧から露点温度を求める 6.112 <= Pw(hpa) <= 123.50（0～50℃）
+    msm_target.loc[(6.112 <= msm_target["Pw"]) & (msm_target["Pw"] <= 123.50),"DT"] = func_DT_50(
+        msm_target.loc[(6.112 <= msm_target["Pw"]) & (msm_target["Pw"] <= 123.50),"Pw"])
+
+    # 水蒸気分圧から露点温度を求める 0.039 <= Pw(hpa) < 6.112（-50～0℃）
+    msm_target.loc[(0.039 <= msm_target["Pw"]) & (msm_target["Pw"] <= 6.112),"DT"] = func_DT_0(
+        msm_target.loc[(0.039 <= msm_target["Pw"]) & (msm_target["Pw"] <= 6.112),"Pw"])
 
 
 def init(
@@ -481,6 +526,12 @@ def main():
         help="MSMファイルの格納ディレクトリ"
     )
     parser.add_argument(
+        "--mode_separate",
+        choices=['Nagata', 'Watanabe','Erbs', 'Udagawa', 'Perez'],
+        default='Perez',
+        help="直散分離の方法"
+    )
+    parser.add_argument(
         "--log",
         choices=['DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'],
         default='ERROR',
@@ -533,7 +584,8 @@ def main():
         mode=args.mode,
         mode_elevation=args.mode_elevation,
         use_est=not args.disable_est,
-        vector_wind=True
+        vector_wind=True,
+        mode_separate=args.mode_separate
     )
 
     # 保存
