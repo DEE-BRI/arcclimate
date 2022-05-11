@@ -77,3 +77,4 @@ Distributed under the MIT License. See [LICENSE](LICENSE.txt) for more informati
 
 This is a programmed version of the construction method that is a product of the Building Standard Development Promotion Project E12, "Study to Detail Climatic Conditions Assumed for Assessment of Energy Consumption Performance.
 
+The data obtained from this program is secondary processed data based on the data published by the Japan Meteorological Agency. The JMA has the rights to the original data.
