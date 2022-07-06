@@ -88,6 +88,8 @@ Distributed under the MIT License. See [LICENSE](LICENSE.txt) for more informati
 
 建築基準整備促進事業E12「エネルギー消費性能の評価の前提となる気候条件の詳細化に向けた検討」の成果物である構築手法をプログラム化したものです。
 
+当該建築基準整備促進事業は、[国立研究開発法人建築研究所](https://www.kenken.go.jp/index.html)、[国立大学法人鹿児島大学](https://www.kagoshima-u.ac.jp/)、[地方独立行政法人北海道立総合研究機構建築研究本部北方建築総合研究所](http://www.hro.or.jp/list/building/index.html)3者の共同研究で実施されました。
+
+![logo_jp](logo_jp.png "研究機関")
+
 本プログラムで得られるデータは気象庁が公開したデータを2次加工したデータです。もとのデータについては気象庁に権利があります。
-
-
