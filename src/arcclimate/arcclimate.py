@@ -591,7 +591,7 @@ def main():
     # 保存
     out = io.StringIO()
     if args.f == "CSV":
-        df_save.to_csv(out)
+        df_save.to_csv(out, line_terminator='\n')
     elif args.f == "EPW":
         to_epw(df_save, out, args.lat, args.lon)
     elif args.f == "HAS":
