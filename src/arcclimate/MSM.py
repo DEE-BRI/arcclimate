@@ -76,6 +76,11 @@ def load_msm_files(
         logging.info('MSMファイル読み込み: {}'.format(msm_path))
         df_msm = pd.read_csv(msm_path, index_col='date',
                              parse_dates=True).sort_index()
+
+        # 負の日射量が存在した際に日射量を0とする
+        df_msm.loc[df_msm["DSWRF_msm"] < 0.0,"DSWRF_msm"] = 0.0
+        df_msm.loc[df_msm["DSWRF_est"] < 0.0,"DSWRF_est"] = 0.0
+
         df_msm_list.append(df_msm)
 
     return msm_list, df_msm_list
