@@ -277,23 +277,53 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
     g_m = df_threshold.groupby(["m"])
 
     for name, group in g_m:
+        center_y = group['y'].astype(int).mean()
 
         for select in select_list:
             group_temp = group[group[select] == True]
 
             if group_temp['y'].count() == 0:
-                select_year += list(group['y'][group['TMP_FS']
-                                    == group['TMP_FS'].min()].values)
-                break
+
+                group_temp = group[group['TMP_FS']
+                            == group['TMP_FS'].min()].copy()
+
+                # TMP_FSの最小が複数残った場合
+                if group_temp['y'].count() != 1:
+                    group = group_temp
+
+                else:
+                    select_year += list(group_temp['y'].values)
+
+                    break
 
             elif group_temp['y'].count() == 1:
                 select_year += list(group_temp['y'].values)
+
                 break
 
             elif select == "w_spd_fs":
-                select_year += list(group_temp['y'][group_temp['TMP_FS']
-                                    == group_temp['TMP_FS'].min()].values)
-                break
+                group_temp = group[group['TMP_FS']
+                            == group['TMP_FS'].min()].copy()
+
+                # TMP_FSの最小が複数残った場合
+                if group_temp['y'].count() != 1:
+                    group_temp['y_abs'] = abs(group_temp.loc[:,'y'].astype(int)-center_y)                    
+                    group_temp = group_temp[group_temp['y_abs']
+                                            == group_temp['y_abs'].min()]
+
+                    # 対象期間の中心年に近い年が複数残った場合
+                    if group_temp['y'].count() != 1:
+                        select_year += list(group_temp['y'].min()) # 若い年を選択する
+
+                    else:
+                        select_year += list(group_temp['y'].values)
+                        break
+
+                else:
+                    select_year += list(group_temp['y'][group_temp['TMP_FS']
+                                        == group_temp['TMP_FS'].min()].values)
+
+                    break
 
             else:
                 group = group_temp
