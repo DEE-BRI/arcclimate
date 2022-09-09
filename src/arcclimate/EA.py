@@ -2,6 +2,16 @@
 標準年の計算モジュール
 """
 
+# 拡張アメダス(MetDS(株)気象データシステム社)の
+# 標準年データの2010年版の作成方法を参考とした
+# ※2020年版は作成方法が変更されている
+#     
+# 参考文献
+# 二宮 秀與 他
+# 外皮・躯体と設備・機器の総合エネルギーシミュレーションツール
+# 「BEST」の開発(その172)30 年拡張アメダス気象データ
+# 空気調和・衛生工学会大会 学術講演論文集 2016.5 (0), 13-16, 2016
+
 import calendar
 import datetime as dt
 import numpy as np
@@ -18,7 +28,7 @@ def calc_EA(df: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
       df(pd.DataFrame): MSMデータフレーム
       start_year(int): 標準年データの検討開始年
       end_year(int): 標準年データの検討終了年
-      use_est(bool): 標準年データの検討に日射量の推計値を使用する（使用しない場合2018年以降のデータのみで作成）
+      use_est(bool): 標準年データの検討に日射量の推計値を使用する(使用しない場合2018年以降のデータのみで作成)
 
     Returns:
       Tuple[pd.DataFrame, List[int]]: 標準年MSMデータフレームおよび選択された年のリストのタプル
@@ -151,31 +161,27 @@ def get_mean_std(df_temp: pd.DataFrame) -> pd.DataFrame:
     """
     set_1 = ["TMP", "DSWRF", "MR"]
     for weather in set_1:
-        # 月平均と年月平均の差分計算 => "XXX_mean"
-        df_temp[weather + "_mean"] = df_temp[weather +
-                                             "_mean_m"] - df_temp[weather + "_mean_ym"]
+        # 月平均と年月平均の差分(絶対値)計算 => "XXX_mean"
+        df_temp[weather + "_dev"] = abs(df_temp[weather + "_mean_m"] - df_temp[weather + "_mean_ym"])
+
         # 月平均と年月平均の差分 "XXX_mean" が月標準偏差σ以下か？ => "XXX"
         # ()
-        df_temp[weather] = (df_temp[weather + "_mean"] < df_temp[weather + "_std_m"]) & \
-                           (df_temp[weather + "_mean"] >
-                            (-1 * df_temp[weather + "_std_m"]))
+        df_temp[weather] = (df_temp[weather + "_dev"] <= df_temp[weather + "_std_m"])
 
     set_2 = ["APCP01", "w_spd"]
     for weather in set_2:
-        # 月平均と年月平均の差分計算 => "XXX_mean"
-        df_temp[weather + "_mean"] = df_temp[weather +
-                                             "_mean_m"] - df_temp[weather + "_mean_ym"]
-        # 月平均と年月平均の差分 "XXX_mean" が月標準偏差σ×1.5以下か？ => "XXX"
-        df_temp[weather] = (df_temp[weather + "_mean"] < (1.5 * df_temp[weather + "_std_m"])) & \
-                           (df_temp[weather + "_mean"] >
-                            (-1.5 * df_temp[weather + "_std_m"]))
+        # 月平均と年月平均の差分(絶対値)計算 => "XXX_mean"
+        df_temp[weather + "_dev"] = abs(df_temp[weather + "_mean_m"] - df_temp[weather + "_mean_ym"])
 
-    # 各項目が想定信頼区間にあ入っているかを真偽値で格納したデータフレーム
-    #         y   m   TMP  DSWRF    MR  APCP01  w_spd
-    # 0    2011  01  True   True  True    True   True
-    # 1    2012  01  True   True  True    True   True
-    # 2    2013  01  True   True  True    True   True
-    return df_temp.loc[:, ["y", "m", "TMP", "DSWRF", "MR", "APCP01", "w_spd"]]
+        # 月平均と年月平均の差分 "XXX_mean" が月標準偏差σ×1.5以下か？ => "XXX"
+        df_temp[weather] = (df_temp[weather + "_dev"] <= (1.5 * df_temp[weather + "_std_m"]))
+
+    # 各項目が想定信頼区間に入っているかを真偽値で格納したデータフレーム
+    #         y   m   TMP_dev   TMP   DSWRF  MR   APCP01  w_spd
+    # 0    2011  01     0.01   True   True  True   True   True
+    # 1    2012  01     0.01   True   True  True   True   True
+    # 2    2013  01     0.01   True   True  True   True   True
+    return df_temp.loc[:, ["y", "m", "TMP_dev", "TMP", "DSWRF", "MR", "APCP01", "w_spd"]]
 
 
 def get_FS(df, df_temp):
@@ -236,11 +242,11 @@ def get_FS(df, df_temp):
 
     set_1 = ["TMP", "DSWRF", "MR"]
     for weather in set_1:
-        FS[weather] = (FS[weather + "_FS"] < FS[weather + "_FS_std"])
+        FS[weather] = (FS[weather + "_FS"] <= FS[weather + "_FS_std"])
 
     set_2 = ["APCP01", "w_spd"]
     for weather in set_2:
-        FS[weather] = (FS[weather + "_FS"] < (1.5 * FS[weather + "_FS_std"]))
+        FS[weather] = (FS[weather + "_FS"] <= (1.5 * FS[weather + "_FS_std"]))
 
     return FS.loc[:, ["y", "m", "TMP", "DSWRF", "MR", "APCP01", "w_spd", 'TMP_FS']]
 
@@ -261,6 +267,10 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
     df_threshold = pd.merge(df_temp, FS, on=['y', 'm'], suffixes=['_mean', '_fs']).sort_values(["m", "y"]).reset_index(
         drop=True)
 
+    # 選定は、気温(偏差)=>水平面全天日射量(偏差)=>絶対湿度(偏差)=>降水量(偏差)=>風速(偏差)=>
+    # 気温(FS)=>水平面全天日射量(FS)=>絶対湿度(FS)=>降水量(FS)=>風速(FS)の順に判定を行う
+    # 最終的に複数が候補となった場合は気温(偏差)が最も0に近い年を選定する。
+
     select_list = ["TMP_mean",
                    "DSWRF_mean",
                    "MR_mean",
@@ -277,23 +287,67 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
     g_m = df_threshold.groupby(["m"])
 
     for name, group in g_m:
+        center_y = group['y'].astype(int).mean()
 
+        # 判定指標でループ(候補が単一の年になるまで繰り返す)
         for select in select_list:
             group_temp = group[group[select] == True]
 
             if group_temp['y'].count() == 0:
-                select_year += list(group['y'][group['TMP_FS']
-                                    == group['TMP_FS'].min()].values)
-                break
+                # group_temp(selectがTrueの年)が0個
+                # =>group(前selectがTrueの年)の中から気温(偏差)が最も小さい年を選定
+
+                # TMP_devが最小の年を抜粋
+                group_temp = group[group['TMP_dev']
+                            == group['TMP_dev'].min()].copy()
+
+                if group_temp['y'].count() != 1:
+                    # TMP_devの最小が複数残った場合 => 次の判定指標へ
+
+                    group = group_temp
+
+                else:
+                    # TMP_devの最小が1つの場合 => 代表年として選定
+
+                    select_year += list(group_temp['y'].values)
+                    break
 
             elif group_temp['y'].count() == 1:
+                # group_temp(selectがTrueの年)が1個 => 代表年として選定
+
                 select_year += list(group_temp['y'].values)
                 break
 
             elif select == "w_spd_fs":
-                select_year += list(group_temp['y'][group_temp['TMP_FS']
-                                    == group_temp['TMP_FS'].min()].values)
-                break
+                # 判定指標がw_spd_fs(最後の判定指標)の時 => 気温(偏差)で判定
+
+                # TMP_devが最小の年を抜粋
+                group_temp = group[group['TMP_dev']
+                            == group['TMP_dev'].min()].copy()
+
+                if group_temp['y'].count() != 1:
+                    # TMP_devの最小が複数残った場合 => 対象期間の中心(平均)に近い年を選定
+
+                    group_temp['y_abs'] = abs(group_temp.loc[:,'y'].astype(int)-center_y)                    
+                    group_temp = group_temp[group_temp['y_abs'] == group_temp['y_abs'].min()]
+
+                    if group_temp['y'].count() != 1:
+                        # 対象期間の中心(平均)に近い年が複数残った場合 => 若い年を選定
+
+                        select_year += list(group_temp['y'].min())
+
+                    else:
+                        # 対象期間の中心(平均)に近い年が1つ => 代表年として選定
+
+                        select_year += list(group_temp['y'].values)
+                        break
+
+                else:
+                    # TMP_devの最小が1つの場合 => 代表年として選定
+
+                    select_year += list(group_temp['y'][group_temp['TMP_dev']
+                                        == group_temp['TMP_dev'].min()].values)
+                    break
 
             else:
                 group = group_temp
@@ -390,7 +444,7 @@ def _smooth_month_gaps(after_month: int, before_year: int, after_year: int, df_t
     # 対象月の代表年における対象月の1日
     after = dt.datetime(year=int(after_year), month=int(after_month), day=1, hour=0)
 
-    # 12月と1月の結合（年をまたぐ）
+    # 12月と1月の結合(年をまたぐ)
     if after_month == 1:
 
         # 前月の代表年における12月31日18時
@@ -424,22 +478,22 @@ def _smooth_month_gaps(after_month: int, before_year: int, after_year: int, df_t
         # 1970年12月31日18時-23時 および 1月1日0時-6時
         timestamp = timestamp_12 + timestamp_1
 
-    # 2月と3月の結合（うるう年の回避）
+    # 2月と3月の結合(うるう年の回避)
     elif after_month == 3:
 
-        # 結合する2つの月の若い月（前月）の代表年における2月28日18時（はじまり）
+        # 結合する2つの月の若い月(前月)の代表年における2月28日18時(はじまり)
         before_start = dt.datetime(year=int(before_year), month=2, day=28, hour=18)
 
-        # 前月の代表年における3月1日6時（おわり）
+        # 前月の代表年における3月1日6時(おわり)
         before_end = before + dt.timedelta(hours=6)
 
         # 前月の代表年における2月28日18時から3月1日6時までのMSMデータフレーム
         df_before = df_temp.loc[before_start:before_end, :].copy()
 
-        # 結合する2つの月の遅い月（対象月）の代表年における2月28日18時（はじまり）
+        # 結合する2つの月の遅い月(対象月)の代表年における2月28日18時(はじまり)
         after_start = dt.datetime(year=int(after_year), month=2, day=28, hour=18)
 
-        # 対象月の代表年における3月1日6時（おわり）
+        # 対象月の代表年における3月1日6時(おわり)
         after_end = after + dt.timedelta(hours=6)
 
         # 対象月の代表年における2月28日18時から3月1日6時までのMSMデータフレーム
