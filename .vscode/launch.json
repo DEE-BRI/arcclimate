@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Run arcclimate",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/arcclimate/arcclimate.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "args": [
-                "36.1290111",
-                "140.0754174",
+                "33.8834976",
+                "130.8751773",
                 "--mode",
                 "EA"
             ]
