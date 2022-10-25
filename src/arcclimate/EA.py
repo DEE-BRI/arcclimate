@@ -411,9 +411,7 @@ def get_smoothing_months(
     Returns:
       Generator[int, int, int]: 円滑化が必要な月,前月の代表年,対象月の代表年のタプル
     """
-    for i in range(11):
-        #TODO: ↑12月の円滑化がされない問題があるのではないか。
-
+    for i in range(12):
         # 1月から計算
         target = i + 1
 
