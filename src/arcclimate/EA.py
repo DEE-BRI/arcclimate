@@ -20,7 +20,7 @@ from typing import List, Tuple, Generator
 from datetime import timedelta
 
 
-def calc_EA(df: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
+def calc_EA(df_msm: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
         -> Tuple[pd.DataFrame, List[int]]:
     """標準年の計算
 
@@ -36,34 +36,34 @@ def calc_EA(df: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
     if use_est:
         # * 標準年データの検討に日射量の推計値を使用する
         #   -> `DSWRF_msm`列を削除し、`DSWRF_est`列を`DSWRF`列へ変更(推計値データを採用)
-        df.drop("DSWRF_msm", axis=1, inplace=True)
-        df.rename(columns={"DSWRF_est": "DSWRF"}, inplace=True)
+        df_msm.drop("DSWRF_msm", axis=1, inplace=True)
+        df_msm.rename(columns={"DSWRF_est": "DSWRF"}, inplace=True)
 
         start_index = dt.datetime(int(start_year), 1, 1)
         end_index = dt.datetime(int(end_year), 12, 31)
-        df_targ = df[(start_index <= df.index) &
-                     (df.index <= end_index)].copy()
+        df_targ = df_msm[(start_index <= df_msm.index) &
+                     (df_msm.index <= end_index)].copy()
 
         # TODO: drop, rename処理はcopyの後の方がよさそう
 
     else:
         # * 2018年以降のデータのみで作成
         # * `DSWRF_est`列を削除し、`DSWRF_msm`列を`DSWRF`列へ変更(MSMデータを採用)
-        df.drop("DSWRF_est", axis=1, inplace=True)
-        df.rename(columns={"DSWRF_msm": "DSWRF"}, inplace=True)
+        df_msm.drop("DSWRF_est", axis=1, inplace=True)
+        df_msm.rename(columns={"DSWRF_msm": "DSWRF"}, inplace=True)
 
         start_year = np.where(start_year <= 2018, 2018, start_year)
 
         start_index = dt.datetime(start_year, 1, 1)
         end_index = dt.datetime(int(end_year), 12, 31)
-        df_targ = df[(start_index <= df.index) &
-                     (df.index <= end_index)].copy()
+        df_targ = df_msm[(start_index <= df_msm.index) &
+                     (df_msm.index <= end_index)].copy()
 
         # TODO: drop, rename処理はcopyの後の方がよさそう
         # TODO: copy処理は if/elseの両方で同じに見える
 
     # ベクトル風速`w_spd`, 16方位の風向風速`w_dir`の列を削除
-    df.drop(["w_spd", "w_dir"], axis=1, inplace=True)
+    df_msm.drop(["w_spd", "w_dir"], axis=1, inplace=True)
 
     # groupのターゲットを追加
     # カラム [TMP, MR, DSWF, Ld, VGRD, UGRD, PRES, APCP01, MR_sat, w_spd, w_dir]
@@ -77,38 +77,44 @@ def calc_EA(df: pd.DataFrame, start_year: int, end_year: int, use_est: bool) \
     df_targ["m"] = df_targ.index.strftime('%m')
     df_targ["d"] = df_targ.index.strftime('%d')
 
-    df_temp = grouping(df_targ)
-    df_temp = get_mean_std(df_temp)
-
-    # df_temp
+    # df_temp : 月平均値による信頼区間の判定
     #         y   m   TMP  DSWRF    MR  APCP01  w_spd
     # 0    2011  01  True   True  True    True   True
     # 1    2012  01  True   True  True    True   True
     # 2    2013  01  True   True  True    True   True
+    df_temp_ci = get_temp_ci(df_targ)
 
-    # FS計算
+    # df_fs : fs計算による信頼区間の判定
     #         y   m    TMP  DSWRF     MR  APCP01  w_spd    TMP_FS
     # 0    2011  01  False  False  False   False  False  0.076795
     # 1    2012  01  False   True  False    True  False  0.149116
-    FS = get_FS(df_targ, df_temp)
+    df_fs_ci = get_fs_ci(df_targ)
+
+    # 信頼区間の判定結果を合成
+    df_ci = pd.merge(
+            df_temp_ci,
+            df_fs_ci,
+            on=['y', 'm'],
+            suffixes=['_mean', '_fs']
+        ).sort_values(["m", "y"]).reset_index(drop=True)
 
     # 月別に代表的な年を取得
-    rep_years = _get_representative_years(df_temp, FS)
+    rep_years = _get_representative_years(df_ci)
 
     # 月別に代表的な年から接合した1年間のデータを作成
-    df_EA = _make_EA(df, rep_years)
+    df_patchwork = patch_representataive_years(df_msm, rep_years)
 
     # 接合部の円滑化
-    for target, before_year, after_year in _get_smoothing_months(rep_years):
-        _smooth_month_gaps(target, before_year, after_year, df, df_EA)
+    for target, before_year, after_year in get_smoothing_months(rep_years):
+        _smooth_month_gaps(target, before_year, after_year, df_msm, df_patchwork)
 
     if use_est:
-        df_EA.rename(columns={"DSWRF": "DSWRF_est"}, inplace=True)
+        df_patchwork.rename(columns={"DSWRF": "DSWRF_est"}, inplace=True)
 
     else:
-        df_EA.rename(columns={"DSWRF": "DSWRF_msm"}, inplace=True)
+        df_patchwork.rename(columns={"DSWRF": "DSWRF_msm"}, inplace=True)
 
-    return df_EA, rep_years
+    return df_patchwork, rep_years
 
 
 def grouping(msm: pd.DataFrame) -> pd.DataFrame:
@@ -144,37 +150,43 @@ def grouping(msm: pd.DataFrame) -> pd.DataFrame:
     #         PRES_std_m, APCP01_std_m,
     #         MR_sat_std_m, w_spd_std_m, w_dir_std_m]
     df_temp = pd.merge(g_ym_mean, g_m_mean, on='m', suffixes=['', '_mean_m'])
-    df_temp = pd.merge(df_temp, g_m_std, on='m',
-                       suffixes=['_mean_ym', '_std_m'])
+    df_temp = pd.merge(df_temp, g_m_std, on='m', suffixes=['_mean_ym', '_std_m'])
 
     return df_temp
 
 
-def get_mean_std(df_temp: pd.DataFrame) -> pd.DataFrame:
-    """
+def get_temp_ci(msm: pd.DataFrame) -> pd.DataFrame:
+    """気象パラメータごとに決められた信頼区間に入っているかの判定
 
     Args:
-      df_temp(pd.DataFrame): 
-
+      df: MSMデータフレーム
     Returns:
-      pd.DataFrame: 
+      pd.DataFrame: 各項目が想定信頼区間に入っているかを真偽値で格納したデータフレーム
+                    カラム = y,m,TMP_dev,TMP,DSWRF,MR,APCP01,w_spd
+                     y,mは年月、TMP_devは月平均気温の分散値、その他は真偽値
     """
-    set_1 = ["TMP", "DSWRF", "MR"]
-    for weather in set_1:
+
+    # df_temp(pd.DataFrame): 気象パラメータごとの年月平均,月平均,月標準偏差
+    #                         カラム = y,m,[TMP,VGRD,PRESS,MR_sat]*[mean_ym,mean_y,std_m]
+    df_temp = grouping(msm)
+
+
+    # 気象パラメータと基準となる標準偏差(σ)の倍率
+    std_rates = [
+        ("TMP",    1.0),
+        ("DSWRF",  1.0),
+        ("MR",     1.0),
+        ("APCP01", 1.5),
+        ("w_spd",  1.5)
+    ]
+
+    for key, std_rate in std_rates:
         # 月平均と年月平均の差分(絶対値)計算 => "XXX_mean"
-        df_temp[weather + "_dev"] = abs(df_temp[weather + "_mean_m"] - df_temp[weather + "_mean_ym"])
+        df_temp[key + "_dev"] = (df_temp[key + "_mean_m"] - df_temp[key + "_mean_ym"]).abs()
 
         # 月平均と年月平均の差分 "XXX_mean" が月標準偏差σ以下か？ => "XXX"
         # ()
-        df_temp[weather] = (df_temp[weather + "_dev"] <= df_temp[weather + "_std_m"])
-
-    set_2 = ["APCP01", "w_spd"]
-    for weather in set_2:
-        # 月平均と年月平均の差分(絶対値)計算 => "XXX_mean"
-        df_temp[weather + "_dev"] = abs(df_temp[weather + "_mean_m"] - df_temp[weather + "_mean_ym"])
-
-        # 月平均と年月平均の差分 "XXX_mean" が月標準偏差σ×1.5以下か？ => "XXX"
-        df_temp[weather] = (df_temp[weather + "_dev"] <= (1.5 * df_temp[weather + "_std_m"]))
+        df_temp[key] = df_temp[key + "_dev"] <= std_rate * df_temp[key + "_std_m"]
 
     # 各項目が想定信頼区間に入っているかを真偽値で格納したデータフレーム
     #         y   m   TMP_dev   TMP   DSWRF  MR   APCP01  w_spd
@@ -184,88 +196,108 @@ def get_mean_std(df_temp: pd.DataFrame) -> pd.DataFrame:
     return df_temp.loc[:, ["y", "m", "TMP_dev", "TMP", "DSWRF", "MR", "APCP01", "w_spd"]]
 
 
-def get_FS(df, df_temp):
+def get_fs_ci(df: pd.DataFrame) -> pd.DataFrame:
     """FS(Finkelstein Schafer statistics)計算
 
     Args:
-      df:
-      df_temp: 
+      df: 1時間ごとの気象パラメータが入ったデータフレーム
+          カラム=date,y,m,d,TMP,DSWRF,MR,APCP01,w_spd
 
     Returns:
-
+      DataFrame: カラム=y,m,TMP,DSWRF,MR,APCP01,w_spd,TMP_FS
     """
 
-
-    # FSの容器の作成
-    #         y   m
-    # 0    2011  01
-    # 1    2012  01
-    FS = df_temp.loc[:, ["y", "m"]]
-
-    weather_list = ["TMP", "DSWRF", "MR", "APCP01", "w_spd"]
+    # 気象パラメータと信頼区間(σ)
+    std_rates = [
+        ("TMP",    1.0),
+        ("DSWRF",  1.0),
+        ("MR",     1.0),
+        ("APCP01", 1.5),
+        ("w_spd",  1.5)
+    ]
 
     # 日平均計算
     g_ymd_mean = df.groupby(["y", "m", "d"], as_index=False).mean()
 
-    # 月ごとのグループを作成
-    g_ymd_mean_m = g_ymd_mean.groupby(["m"], as_index=False)
-
-    # 月ごとの累積度数分布(CDF)の計算
-    for name, group in g_ymd_mean_m:
-        for weather in weather_list:
-            g = group.sort_values(weather).reset_index()
-            N = len(g)
-            g.loc[:, "cdf_ALL"] = [(i + 1) / N for i in range(N)]
-            g = g.sort_values('index').set_index('index')
-            g_ymd_mean.loc[list(g.index), weather +
-                           "_cdf_ALL"] = g["cdf_ALL"].values
-
-    # 年月ごとの累積度数分布(CDF)の計算
-    g_ymd_mean_ym = g_ymd_mean.groupby(["y", "m"], as_index=False)
-    for name, group in g_ymd_mean_ym:
-        for weather in weather_list:
-            g = group.sort_values(weather).reset_index()
-            N = len(g)
-            g.loc[:, "cdf_year"] = [(i + 1) / N for i in range(N)]
-            g = g.sort_values('index').set_index('index')
-            g_ymd_mean.loc[list(g.index), weather +
-                           "_cdf_year"] = g["cdf_year"].values
-
-    for weather in weather_list:
-        g_ymd_mean.loc[:, weather + "_FS"] = np.abs(g_ymd_mean[weather + "_cdf_ALL"].values - g_ymd_mean[weather + "_cdf_year"].values)
-        df_FS = g_ymd_mean.loc[:, ["y", "m", weather + "_FS"]].groupby(["y", "m"], as_index=False).mean()
-        FS = pd.merge(FS, df_FS, on=['y', 'm'])
-
-    FS_std = FS.groupby(["m"]).std().reset_index()
-
-    FS = pd.merge(FS, FS_std, on='m', suffixes=['', '_std'])
-
-    set_1 = ["TMP", "DSWRF", "MR"]
-    for weather in set_1:
-        FS[weather] = (FS[weather + "_FS"] <= FS[weather + "_FS_std"])
-
-    set_2 = ["APCP01", "w_spd"]
-    for weather in set_2:
-        FS[weather] = (FS[weather + "_FS"] <= (1.5 * FS[weather + "_FS_std"]))
+    FS = None
+    for key, std_rate in std_rates:
+        # FS値,FS値の偏差,FS値の偏差が指定範囲内に入っているか
+        df_FS = make_fs(g_ymd_mean, key, std_rate)
+        FS = pd.merge(FS, df_FS, on=['y', 'm']) if FS is not None else df_FS
 
     return FS.loc[:, ["y", "m", "TMP", "DSWRF", "MR", "APCP01", "w_spd", 'TMP_FS']]
+
+
+def make_fs(g_ymd_mean: pd.DataFrame, key: str, std_rate: float):
+    """特定の気象パラメータに対するFS(Finkelstein Schafer statistics)計算
+
+    Args:
+      g_ymd_mean: 日平均値の入ったデータフレーム
+      key: FS値を計算するカラム名
+      std_rate: FS値の偏差が std_rate * σ 以下であれば カラムkeyにTrueを設定します
+
+    Returns:
+      DataFrame: カラム=y,m,<key>,<key>_FS,<key>_FS_std
+    """
+    # 月ごとの累積度数分布(CDF)の計算
+    make_cdf(g_ymd_mean, by=["m"], key=key, suffix="_cdf_ALL")
+
+    # 年月ごとの累積度数分布(CDF)の計算
+    make_cdf(g_ymd_mean, by=["y", "m"], key=key, suffix="_cdf_year")
+
+    # 日ごとのFS値の計算
+    g_ymd_mean.loc[:, key + "_FS"] = \
+        (g_ymd_mean[key + "_cdf_ALL"] - g_ymd_mean[key + "_cdf_year"]).abs()
+
+    # 年月ごとのFS値の平均を計算 : <key>_FS
+    fs_ym = g_ymd_mean.loc[:, ["y", "m", key + "_FS"]] \
+                .groupby(["y", "m"], as_index=False) \
+                .mean()
+
+    # 月ごとにFS値の偏差 : <key>_FS_std
+    fs_std_m = fs_ym.loc[: , 'm', key + '_FS'] \
+                .groupby(['m'],as_index=False) \
+                .agg(lambda x: np.sqrt((x ** 2).mean()))
+    df_fs_ym = pd.merge(fs_ym, fs_std_m, on='m', suffixes=['', '_std'])
+
+    # 年月ごとにFS値の偏差が指定の範囲に収まっているか : <key>
+    df_fs_ym[key] = \
+        df_fs_ym[key + "_FS"] <= (std_rate * df_fs_ym[key + "_FS_std"])
+
+    return df_fs_ym
+
+
+def make_cdf(g_ymd_mean: pd.DataFrame, by: Tuple[str], key: str, suffix: str):
+    """特定の気象パラメータに対するCDF計算
+    g_ymd_mean に 名前が<key>_<suffix> のカラムを追加し、CDFを格納する。
+
+    Args:
+      g_ymd_mean: 日平均値の入ったデータフレーム
+      by: CDF計算時にグループ化するカラム名のリスト
+      key: CDF計算時対象のカラム名
+      suffix: CDF計算結果を格納するカラム名に付与するサフィックス
+    """
+    g_ymd_mean_m = g_ymd_mean.groupby(by, as_index=False)
+    for _, group in g_ymd_mean_m:
+        g = group.sort_values(key).reset_index()
+        N = len(g)
+        g.loc[:, "cdf"] = [(i + 1) / N for i in range(N)]
+        g = g.sort_values('index').set_index('index')
+        g_ymd_mean.loc[list(g.index), key + suffix] = g["cdf"].values
 
 
 # **** 代表年の決定と接合処理 ****
 
 
-def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[int]:
+def _get_representative_years(df_ci: pd.DataFrame) -> List[int]:
     """
 
     Args:
-      df_temp(pd.DataFrame): 
-      FS: 
+      df_ci(pd.DataFrame): 信頼区間判定結果の入ったデータフレーム
 
     Returns:
       List[int]: 月別の代表的な年
     """
-    df_threshold = pd.merge(df_temp, FS, on=['y', 'm'], suffixes=['_mean', '_fs']).sort_values(["m", "y"]).reset_index(
-        drop=True)
 
     # 選定は、気温(偏差)=>水平面全天日射量(偏差)=>絶対湿度(偏差)=>降水量(偏差)=>風速(偏差)=>
     # 気温(FS)=>水平面全天日射量(FS)=>絶対湿度(FS)=>降水量(FS)=>風速(FS)の順に判定を行う
@@ -284,7 +316,7 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
 
     select_year = []
 
-    g_m = df_threshold.groupby(["m"])
+    g_m = df_ci.groupby(["m"])
 
     for name, group in g_m:
         center_y = group['y'].astype(int).mean()
@@ -293,7 +325,7 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
         for select in select_list:
             group_temp = group[group[select] == True]
 
-            if group_temp['y'].count() == 0:
+            if len(group_temp) == 0:
                 # group_temp(selectがTrueの年)が0個
                 # =>group(前selectがTrueの年)の中から気温(偏差)が最も小さい年を選定
 
@@ -301,61 +333,35 @@ def _get_representative_years(df_temp: pd.DataFrame, FS: pd.DataFrame) -> List[i
                 group_temp = group[group['TMP_dev']
                             == group['TMP_dev'].min()].copy()
 
-                if group_temp['y'].count() != 1:
-                    # TMP_devの最小が複数残った場合 => 次の判定指標へ
-
-                    group = group_temp
-
-                else:
-                    # TMP_devの最小が1つの場合 => 代表年として選定
-
-                    select_year += list(group_temp['y'].values)
-                    break
-
-            elif group_temp['y'].count() == 1:
+            if len(group_temp) == 1:
                 # group_temp(selectがTrueの年)が1個 => 代表年として選定
-
-                select_year += list(group_temp['y'].values)
                 break
-
-            elif select == "w_spd_fs":
-                # 判定指標がw_spd_fs(最後の判定指標)の時 => 気温(偏差)で判定
-
-                # TMP_devが最小の年を抜粋
-                group_temp = group[group['TMP_dev']
-                            == group['TMP_dev'].min()].copy()
-
-                if group_temp['y'].count() != 1:
-                    # TMP_devの最小が複数残った場合 => 対象期間の中心(平均)に近い年を選定
-
-                    group_temp['y_abs'] = abs(group_temp.loc[:,'y'].astype(int)-center_y)                    
-                    group_temp = group_temp[group_temp['y_abs'] == group_temp['y_abs'].min()]
-
-                    if group_temp['y'].count() != 1:
-                        # 対象期間の中心(平均)に近い年が複数残った場合 => 若い年を選定
-
-                        select_year += list(group_temp['y'].min())
-
-                    else:
-                        # 対象期間の中心(平均)に近い年が1つ => 代表年として選定
-
-                        select_year += list(group_temp['y'].values)
-                        break
-
-                else:
-                    # TMP_devの最小が1つの場合 => 代表年として選定
-
-                    select_year += list(group_temp['y'][group_temp['TMP_dev']
-                                        == group_temp['TMP_dev'].min()].values)
-                    break
-
             else:
                 group = group_temp
+
+        if len(group_temp) > 1:
+            # 判定指標がw_spd_fs(最後の判定指標)の時 => 気温(偏差)で判定
+
+            # TMP_devが最小の年を抜粋
+            group_temp = group[group['TMP_dev']
+                        == group['TMP_dev'].min()].copy()
+
+            if len(group_temp) > 1:
+                # TMP_devの最小が複数残った場合 => 対象期間の中心(平均)に近い年を選定
+
+                group_temp['y_abs'] = abs(group_temp.loc[:,'y'].astype(int)-center_y)                    
+                group_temp = group_temp[group_temp['y_abs'] == group_temp['y_abs'].min()]
+
+                # 対象期間の中心(平均)に近い年が複数残った場合 => 若い年を選定
+                group_temp.sort_values('y', inplace=True)
+
+        # 絞り込んだ一覧表の先頭の年を採用
+        select_year.append(group_temp['y'].iloc[0])
 
     return select_year
 
 
-def _make_EA(df: pd.DataFrame, rep_years: List[int]) -> pd.DataFrame:
+def patch_representataive_years(df: pd.DataFrame, rep_years: List[int]) -> pd.DataFrame:
     """標準年の作成
     月別に代表的な年から接合した1年間のデータを作成します。
 
@@ -394,7 +400,7 @@ def _make_EA(df: pd.DataFrame, rep_years: List[int]) -> pd.DataFrame:
 # **** 円滑化処理 ****
 
 
-def _get_smoothing_months(
+def get_smoothing_months(
     rep_years: List[int]
 ) -> Generator[int, int, int]:
     """円滑化が必要な月の取得
@@ -405,8 +411,7 @@ def _get_smoothing_months(
     Returns:
       Generator[int, int, int]: 円滑化が必要な月,前月の代表年,対象月の代表年のタプル
     """
-    for i in range(11):
-
+    for i in range(12):
         # 1月から計算
         target = i + 1
 
@@ -416,7 +421,7 @@ def _get_smoothing_months(
         # 対象月の代表年
         after_year = int(rep_years[i])
 
-        # 前月と対象月では対象月が異なる または 前月が2月かつその代表年が閏年の場合
+        # 前月と対象月では対象年が異なる または 前月が2月かつその代表年が閏年の場合
         if before_year != after_year or (target == 3 and calendar.isleap(int(before_year))):
             yield target, before_year, after_year
 

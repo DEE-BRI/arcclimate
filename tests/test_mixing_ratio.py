@@ -21,22 +21,22 @@ def test_get_corrected_MR():
     assert 1437.53 == pytest.approx(MR_sat, 0.01)
 
     # 重量絶対湿度の標高補正1
-    # 1437 .53 > 8300 なので、 補正結果は 8300
+    # 1437.53 < 8300 なので、 補正結果は 1437.53
     MR_corr = get_corrected_mixing_ratio(
         MR=np.array([8300.0]),
         TMP=np.array([TMP]),
         PRES=np.array([PRES])
     )
-    assert 8300.00 == pytest.approx(MR_corr, 0.01)
+    assert 1437.53 == pytest.approx(MR_corr, 0.01)
 
     # 重量絶対湿度の標高補正2
-    # 1437 .53 > 300.0 なので、 補正結果は 1437.53
+    # 1437 .53 > 300.0 なので、 補正結果は 300.0
     MR_corr = get_corrected_mixing_ratio(
         MR=np.array([300.0]),
         TMP=np.array([TMP]),
         PRES=np.array([PRES])
     )
-    assert 1437.53 == pytest.approx(MR_corr, 0.01)
+    assert 300.0 == pytest.approx(MR_corr, 0.01)
 
 
 def test_get_mixing_ratio():
