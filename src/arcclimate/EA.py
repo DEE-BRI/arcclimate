@@ -255,7 +255,7 @@ def make_fs(g_ymd_mean: pd.DataFrame, key: str, std_rate: float):
                 .mean()
 
     # 月ごとにFS値の偏差 : <key>_FS_std
-    fs_std_m = fs_ym.loc[: , 'm', key + '_FS'] \
+    fs_std_m = fs_ym.loc[: , ['m', key + '_FS']] \
                 .groupby(['m'],as_index=False) \
                 .agg(lambda x: np.sqrt((x ** 2).mean()))
     df_fs_ym = pd.merge(fs_ym, fs_std_m, on='m', suffixes=['', '_std'])
