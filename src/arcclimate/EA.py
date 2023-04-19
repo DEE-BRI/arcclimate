@@ -39,8 +39,8 @@ def calc_EA(df_msm: pd.DataFrame, start_year: int, end_year: int, use_est: bool)
         df_msm.drop("DSWRF_msm", axis=1, inplace=True)
         df_msm.rename(columns={"DSWRF_est": "DSWRF"}, inplace=True)
 
-        start_index = dt.datetime(int(start_year), 1, 1, 0, 0, 0, 0)
-        end_index = dt.datetime(int(end_year), 12, 31, 23, 0, 0, 0)
+        start_index = dt.datetime(start_year, 1, 1, 0, 0, 0, 0)
+        end_index = dt.datetime(end_year, 12, 31, 23, 0, 0, 0)
         df_targ = df_msm[(start_index <= df_msm.index) &
                      (df_msm.index <= end_index)].copy()
 
@@ -55,7 +55,7 @@ def calc_EA(df_msm: pd.DataFrame, start_year: int, end_year: int, use_est: bool)
         start_year = np.where(start_year <= 2018, 2018, start_year)
 
         start_index = dt.datetime(start_year, 1, 1, 0, 0, 0, 0)
-        end_index = dt.datetime(int(end_year), 12, 31, 23, 0, 0, 0)
+        end_index = dt.datetime(end_year, 12, 31, 23, 0, 0, 0)
         df_targ = df_msm[(start_index <= df_msm.index) &
                      (df_msm.index <= end_index)].copy()
 
