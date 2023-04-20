@@ -279,7 +279,8 @@ def make_cdf(g_ymd_mean: pd.DataFrame, by: Tuple[str], key: str, suffix: str):
     """
     g_ymd_mean_m = g_ymd_mean.groupby(by, as_index=False)
     for _, group in g_ymd_mean_m:
-        g = group.sort_values(key).reset_index()
+        # APCP01の値には0が多数含まれるため、qsortでは結果が安定しない
+        g = group.sort_values(key, kind="stable").reset_index()
         N = len(g)
         g.loc[:, "cdf"] = [(i + 1) / N for i in range(N)]
         g = g.sort_values('index').set_index('index')
@@ -353,7 +354,7 @@ def _get_representative_years(df_ci: pd.DataFrame) -> List[int]:
                 group_temp = group_temp[group_temp['y_abs'] == group_temp['y_abs'].min()]
 
                 # 対象期間の中心(平均)に近い年が複数残った場合 => 若い年を選定
-                group_temp.sort_values('y', inplace=True)
+                group_temp.sort_values('y', kind="stable", inplace=True)
 
         # 絞り込んだ一覧表の先頭の年を採用
         select_year.append(group_temp['y'].iloc[0])
