@@ -134,7 +134,7 @@ def vincenty_inverse(
         cos2Sm = cosS - 2 * sinU1 * sinU2 / cos2A
         C = ƒ / 16 * cos2A * (4 + ƒ * (4 - 3 * cos2A))
         ramada_p = ramda
-        λ = L + (1 - C) * ƒ * sinA * \
+        ramda = L + (1 - C) * ƒ * sinA * \
             (sigma + C * sinS *
              (cos2Sm + C * cosS * (-1 + 2 * cos2Sm ** 2)))
 
