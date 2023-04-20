@@ -399,7 +399,7 @@ def to_has(df: pd.DataFrame, out: io.StringIO):
 
         # 風向
         out.write(("{:3d}"*24).format(*w_dir[:,d]))
-        out.write("{}7\n".format(day_signature))
+        out.write("{}6\n".format(day_signature))
 
         # 風速
         out.write(("{:3d}"*24).format(*w_spd[:,d]))
