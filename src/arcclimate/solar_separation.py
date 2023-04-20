@@ -862,7 +862,7 @@ def get_DN_perez_core(G_mj:np.ndarray,
     G = MJ_to_W(G_mj) # MJ/m2・h => W/m2
 
     # 計算対象時刻の水平面全天日射量が1W/m2以下の時は、DIRMAXを0とする
-    if G[1] < 1.0 or G[1] == np.nan: # G[1] 当該時刻の水平面全天日射量
+    if G[1] < 1.0 or np.isnan(G[1]): # G[1] 当該時刻の水平面全天日射量
         return 0.0
     
     if h_deg[1] <= 0.0: # h_deg[1] 当該時刻の太陽高度
@@ -893,10 +893,10 @@ def get_DN_perez_core(G_mj:np.ndarray,
     KT1[cz < 0.0] = np.nan
     
     # 前の時刻のデータがない場合
-    if G[0] == np.nan or ZENITH [0] == np.nan: #G[0] 1時間前のG,Z[0] 1時間前のZ
+    if np.isnan(G[0]) or np.isnan(ZENITH[0]): #G[0] 1時間前のG,Z[0] 1時間前のZ
         KT1[0] = np.nan
     # 後の時刻のデータがない場合
-    if G[2] == np.nan or ZENITH [2] == np.nan:
+    if np.isnan(G[2]) or np.isnan(ZENITH[2]):
         KT1[2] = np.nan
     
     # 対象時刻の天頂高度のコサインが0未満の場合
@@ -918,14 +918,14 @@ def get_DN_perez_core(G_mj:np.ndarray,
     
     BMAX = IO * (KNC - (A + B * np.exp(C * AM[1])))
     
-    if KT1[0] == np.nan and KT1[2] == np.nan:
+    if np.isnan(KT1[0]) and np.isnan(KT1[2]):
         K = 6 #7 pythonは0オリジンのため-1
     
     else:
-        if KT1[0] == np.nan or ZENITH[0] >= 85.0:
+        if np.isnan(KT1[0]) or ZENITH[0] >= 85.0:
             DKT1 = np.abs(KT1[2] - KT1[1])
         
-        elif KT1[2] == np.nan or ZENITH[2] >= 85.0:
+        elif np.isnan(KT1[2]) or ZENITH[2] >= 85.0:
             DKT1 = np.abs(KT1[1] - KT1[0])
         
         else:
@@ -937,7 +937,7 @@ def get_DN_perez_core(G_mj:np.ndarray,
     
     J = np.digitize(ZENITH[1], ZBIN)
     
-    if TD == np.nan:
+    if np.isnan(TD):
         L = 4 #5 pythonは0オリジンのため-1
         
     else:
