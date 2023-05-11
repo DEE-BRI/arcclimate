@@ -88,7 +88,7 @@ def get_separate(msm_target:pd.DataFrame,
             # 日射量が無い場合
             pass
 
-    return msm_target.drop(["IN0","h","Sinh","A"],axis=1)
+    return msm_target.drop(["IN0","Sinh"],axis=1)
 
 
 def get_sun_position(lat:float,

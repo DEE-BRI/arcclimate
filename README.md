@@ -55,6 +55,8 @@ The results are saved in `weather.csv`.
 10. APCP01 ... Hourly integrated value of precipitation before the reference time (unit: mm/h)
 11. w_spd ... Instantaneous value of wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
+13. h ... Angle of sun elevation (unit: deg)
+14. A ... Solar azimuth (unit: deg)
 
 Weather data (.has) for [HASP](https://www.jabmee.or.jp/hasp/) can also be output.
 The output weather data for HASP will reflect only the values for outside temperature (unit: °C), absolute humidity (unit: g/kgDA), wind direction (16 directions), and wind speed (unit: m/s).
