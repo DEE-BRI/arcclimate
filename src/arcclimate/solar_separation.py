@@ -189,6 +189,9 @@ def get_SH(TH:np.ndarray,
         if Sinh[i] <= 0.0:
             sh = 0.0
         
+        elif np.isnan(TH[i]):
+            sh = np.nan
+
         else:
             sh = max(0.0,
                      get_SH_core(TH[i],
@@ -364,7 +367,11 @@ def get_SH_Erbs(TH:np.ndarray,
     dataL = len(TH)
     
     for i in range(dataL):
-        if TH[i] <= 0.0:
+
+        if np.isnan(TH[i]):
+            sh = np.nan
+
+        elif TH[i] <= 0.0:
             sh = 0.0
         
         else:
@@ -466,8 +473,11 @@ def get_DN_Udagawa(TH:np.ndarray,
     dataL = len(TH)
     
     for i in range(dataL):
+        if np.isnan(TH[i]):
+            dn = np.nan
+
         # 水平面全天日射量が0.0の場合、法線面直達日射量を0.0
-        if TH[i] <= 0.0:
+        elif TH[i] <= 0.0:
             dn = 0.0
         
         else:
