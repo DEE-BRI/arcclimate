@@ -27,6 +27,10 @@ def get_separate(msm_target:pd.DataFrame,
     
     # 2種の日射量データについて繰り返し
     for targ in ["est","msm"]:
+
+        DN_series = None
+        SH_series = None
+
         if "DSWRF_" + targ in msm_target.columns:
             # Nagata、Watanabe方式では大気透過率Pの収束計算が必要
             if mode_separation == "Nagata" or mode_separation == "Watanabe":
@@ -39,26 +43,26 @@ def get_separate(msm_target:pd.DataFrame,
                     method_SH = func_SH_Watanabe
 
                 # SHの取得                    
-                msm_target["SH_" + targ] = get_SH(msm_target["DSWRF_" + targ].values,
+                SH_series = get_SH(msm_target["DSWRF_" + targ].values,
                 msm_target.Sinh.values,
                 msm_target.IN0.values,
                 method_SH)
 
             # Erbs方式でSHを計算
             elif mode_separation == "Erbs":
-                msm_target["SH_" + targ] = get_SH_Erbs(msm_target["DSWRF_" + targ].values,
+                SH_series = get_SH_Erbs(msm_target["DSWRF_" + targ].values,
                 msm_target.IN0.values,
                 msm_target.Sinh.values)
 
             # Udagawa方式でDNを計算
             elif mode_separation == "Udagawa":
-                msm_target["DN_" + targ] = get_DN_Udagawa(msm_target["DSWRF_" + targ].values,
+                DN_series = get_DN_Udagawa(msm_target["DSWRF_" + targ].values,
                 msm_target.IN0.values,
                 msm_target.Sinh.values)
 
             # Perez方式でDNを計算    
             elif mode_separation == "Perez":
-                msm_target["DN_" + targ] = get_DN_perez(msm_target["DSWRF_" + targ].values,
+                DN_series = get_DN_perez(msm_target["DSWRF_" + targ].values,
                 msm_target["h"].values,
                 msm_target["DT"].values,
                 ele_target,
@@ -67,22 +71,25 @@ def get_separate(msm_target:pd.DataFrame,
             # SHを推計している場合(Nagata,Watanabe,Erbs)
             if "SH_" + targ in msm_target.columns:
                 # DNの取得
-                msm_target["DN_" + targ] = func_DN(msm_target["DSWRF_" + targ].values,
-                msm_target["SH_" + targ].values,
+                DN_series = func_DN(msm_target["DSWRF_" + targ].values,
+                SH_series.values,
                 msm_target.Sinh.values)
                 msm_target.loc[msm_target["DN_" + targ] <= 0.0,"DN_" + targ] = 0.0
 
             # DNを取得している場合(Udagawa,Perez)
             elif "DN_" + targ in msm_target.columns:
                 # SHの取得
-                msm_target["SH_" + targ] = func_SH(msm_target["DSWRF_" + targ].values,
-                msm_target["DN_" + targ].values,
+                SH_series = func_SH(msm_target["DSWRF_" + targ].values,
+                DN_series.values,
                 msm_target["Sinh"].values)
                 msm_target.loc[msm_target["SH_" + targ] <= 0.0,"SH_" + targ] = 0.0
 
             else:
                 # DNもSHも無い場合
                 pass
+
+            msm_target["DN_" + targ] = DN_series
+            msm_target["SH_" + targ] = SH_series
 
         else:
             # 日射量が無い場合
