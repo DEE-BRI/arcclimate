@@ -91,7 +91,11 @@ Distributed under the MIT License. See [LICENSE](LICENSE.txt) for more informati
 
 建築基準整備促進事業E12「エネルギー消費性能の評価の前提となる気候条件の詳細化に向けた検討」の成果物である構築手法をプログラム化したものです。
 
-当該建築基準整備促進事業は、[国立研究開発法人建築研究所](https://www.kenken.go.jp/index.html)、[国立大学法人鹿児島大学](https://www.kagoshima-u.ac.jp/)、[地方独立行政法人北海道立総合研究機構建築研究本部北方建築総合研究所](http://www.hro.or.jp/list/building/index.html)3者の共同研究で実施されました。
+当該建築基準整備促進事業については、以下のページをご参照ください。
+
+令和2年度建築基準整備促進事業　[成果概要](https://www.mlit.go.jp/jutakukentiku/build/jutakukentiku_house_fr_000121.html)
+
+エネルギー消費性能の評価の前提となる気候条件の詳細化に向けた検討　[成果報告会資料](https://www.mlit.go.jp/jutakukentiku/build/content/r2_kiseisoku_e12.pdf)
 
 ![logo_jp](logo_jp.png "研究機関")
 
