@@ -79,8 +79,11 @@ Distributed under the MIT License. See [LICENSE](LICENSE.txt) for more informati
 
 This is a programmed version of the construction method that is a product of the Building Standard Development Promotion Project E12, "Study to Detail Climatic Conditions Assumed for Assessment of Energy Consumption Performance.
 
-The project to promote the development of building standards was conducted as a joint research project by the [Building Research Institute](https://www.kenken.go.jp/english/index.html), [Kagoshima University](https://www.kagoshima-u.ac.jp/en/), and [Hokkaido National Research Institute, Building Research Division, Northern Building Research Institute](http://www.hro.or.jp/en/index.html).
+For more information on this project to promote building code development, please refer to the following page.
 
+[2020 Building Standard Improvement Promotion Project](https://www.mlit.go.jp/jutakukentiku/build/jutakukentiku_house_fr_000121.html)
+
+Study to Detail Climatic Conditions Assumed for Assessment of Energy Consumption Performance [Summary of Results](https://www.mlit.go.jp/jutakukentiku/build/content/r2_kiseisoku_e12.pdf)
 
 ![logo_en](logo_en.png "研究機関")
 
