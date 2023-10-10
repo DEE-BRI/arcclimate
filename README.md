@@ -59,10 +59,10 @@ The results are saved in `weather.csv`.
 14. a ... Average azimuth angle of the sun for the hour before the reference time (unit: deg)
 15. RH ... Instantaneous value of relative humidity at the reference time (unit: %)
 16. Pw ... Instantaneous value of partial pressure of water vapor at the reference time (unit: hpa)
-17. DN_est ... Direct normal irradiance obtained by direct scatter separation of the estimated total irradiance for the hour before the reference time (unit: MJ/m2)
-18. SH_est ... Solar radiation on the horizontal plane by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
-19. DN_msm ... Direct normal irradiance obtained by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
-20. SH_msm ... Solar radiation on the horizontal plane by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
+17. DN_est ... Direct normal irradiance obtained by direct scatter separation of the *estimated* total irradiance for the hour before the reference time (unit: MJ/m2)
+18. SH_est ... Solar radiation on the horizontal plane by direct scatter separating of the *estimated* total irradiance for the hour before the reference time (unit: MJ/m2)
+19. DN_msm ... Direct normal irradiance obtained by direct scatter separating of the total irradiance for the hour before the reference time (unit: MJ/m2)
+20. SH_msm ... Solar radiation on the horizontal plane by direct scatterseparating of the total irradiance for the hour before the reference time (unit: MJ/m2)
 21. NR ... Nocturnal radiation (unit: MJ/m2)
 
 Weather data (.has) for [HASP](https://www.jabmee.or.jp/hasp/) can also be output.
