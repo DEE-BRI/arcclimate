@@ -55,8 +55,15 @@ The results are saved in `weather.csv`.
 10. APCP01 ... Hourly integrated value of precipitation before the reference time (unit: mm/h)
 11. w_spd ... Instantaneous value of wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
-13. h ... Angle of sun elevation (unit: deg)
-14. A ... Solar azimuth (unit: deg)
+13. h ... Average angle of the sun's altitude for the hour before the reference time (unit: deg)
+14. a ... Average azimuth angle of the sun for the hour before the reference time (unit: deg)
+15. RH ... Instantaneous value of relative humidity at the reference time (unit: %)
+16. Pw ... Instantaneous value of partial pressure of water vapor at the reference time (unit: hpa)
+17. DN_est ... Direct normal irradiance obtained by direct scatter separation of the estimated total irradiance for the hour before the reference time (unit: MJ/m2)
+18. SH_est ... Solar radiation on the horizontal plane by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
+19. DN_msm ... Direct normal irradiance obtained by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
+20. SH_msm ... Solar radiation on the horizontal plane by direct scatter-separating the integrated values of solar radiation for the hour before the reference time (unit: MJ/m2)
+21. NR ... Nocturnal radiation (unit: MJ/m2)
 
 Weather data (.has) for [HASP](https://www.jabmee.or.jp/hasp/) can also be output.
 The output weather data for HASP will reflect only the values for outside temperature (unit: °C), absolute humidity (unit: g/kgDA), wind direction (16 directions), and wind speed (unit: m/s).
