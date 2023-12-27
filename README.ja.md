@@ -55,7 +55,7 @@ $ arcclimate 36.1290111 140.0754174 -o weather.csv
 6. Ld ... 参照時刻の前1時間の下向き大気放射量の積算値 (単位:MJ/m2)
 7. VGRD ... 南北風(V軸) (単位:m/s)
 8. UGRD ... 東西風(U軸) (単位:m/s)
-9. PRES ... 気圧 (単位:hPa)
+9. PRES ... 気圧 (単位:Pa)
 10. APCP01 ... 参照時刻の前1時間の降水量の積算値 (単位:mm/h)
 11. w_spd ... 参照時刻時点の風速の瞬時値 (単位:m/s)
 12. w_dir ... 参照時刻時点の風向の瞬時値 (単位:°)
@@ -75,8 +75,23 @@ $ arcclimate 36.1290111 140.0754174 -o weather.csv
 出力するHASP用気象データには、外気温(単位:℃)、絶対湿度(単位:g/kgDA)、風向(16方位)、風速(単位:m/s)のみ値が反映されます。
 法線面直達日射量、水平面天空日射量、水平面夜間日射量については0が出力されます。
 
-[EnergyPlus](https://energyplus.net/)用の気象データ(.epw)を出力することもできます。
-ただし、外気温(単位:℃)、風向(単位:°)、風速(単位:m/s)、降水量の積算値(単位:mm/h)のみを出力します。
+[EnergyPlus](https://energyplus.net/)用の気象データ(.epw)を出力することもできます。以下の項目が出力されます。
+1. Year = year(date)
+2. Month = month(date)
+3. Day = day(date)
+4. Hour = hour(date)
+5. Minute = 0
+6. Dry Bulb Temperature [C] = TMP
+7. Dew Point Temperature [C] = DT
+8. Relative Humidity [%] = RH
+9. Atmospheric Station Pressure [Pa] = PRES
+10. Horizontal Infrared Radiation from Sky [Wh/m2] = Ld * 1000 / 3.6
+11. Global Horizontal Radiation [Wh/m2] = DSWRF_est * 1000 / 3.6
+12. Direct Normal Radiation [Wh/m2] = DN_est * 1000 / 3.6
+13. Diffuse Horizontal Radiation [Wh/m2] = SH_est * 1000 / 3.6
+14. Wind Direction [degree] = w_dir
+15. Wind Speed [m/s] = w_spd
+16. Liquid Precipitation Depth [mm] = APCP01
 
 HASPまたはEnergyPlus用の気象データを生成する際には、`-f HAS` または `-f EPW`のようにコマンドラインオプションを追加してください。
 

@@ -51,7 +51,7 @@ The results are saved in `weather.csv`.
 6. Ld ... Hourly integrated value of downward atmospheric radiation before the reference time (unit: MJ/m2)
 7. VGRD ... North-south component (V-axis) of wind speed (unit: m/s)
 8. UGRD ... East-west component (U-axis) of wind speed (unit: m/s)
-9. PRES ... Atmospheric pressure (unit: hPa)
+9. PRES ... Atmospheric pressure (unit: Pa)
 10. APCP01 ... Hourly integrated value of precipitation before the reference time (unit: mm/h)
 11. w_spd ... Instantaneous value of wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
@@ -69,8 +69,23 @@ Weather data (.has) for [HASP](https://www.jabmee.or.jp/hasp/) can also be outpu
 The output weather data for HASP will reflect only the values for outside temperature (unit: °C), absolute humidity (unit: g/kgDA), wind direction (16 directions), and wind speed (unit: m/s).
 Zero is output for normal surface direct irradiance, horizontal surface sky irradiance, and horizontal surface nighttime irradiance.
 
-Weather data (.epw) for [EnergyPlus](https://energyplus.net/) can also be output.
-However, only the outside temperature (unit: °C), wind direction (unit: °), wind speed (unit: m/s), and total precipitation (unit: mm/h) are output.
+Weather data (.epw) for [EnergyPlus](https://energyplus.net/) can also be output.The following items will be output.
+1. Year
+2. Month
+3. Day
+4. Hour
+5. Minute = 0
+6. Dry Bulb Temperature [C] = TMP
+7. Dew Point Temperature [C] = DT
+8. Relative Humidity [%] = RH
+9. Atmospheric Station Pressure [Pa] = PRES
+10. Horizontal Infrared Radiation from Sky [Wh/m2] = Ld * 1000 / 3.6
+11. Global Horizontal Radiation [Wh/m2] = DSWRF_est * 1000 / 3.6
+12. Direct Normal Radiation [Wh/m2] = DN_est * 1000 / 3.6
+13. Diffuse Horizontal Radiation [Wh/m2] = SH_est * 1000 / 3.6
+14. Wind Direction [degree] = w_dir
+15. Wind Speed [m/s] = w_spd
+16. Liquid Precipitation Depth [mm] = APCP01
 
 When generating weather data for HASP or EnergyPlus, please add command line options like `-f HAS` or `-f EPW`.
 
