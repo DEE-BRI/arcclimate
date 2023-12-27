@@ -6,6 +6,7 @@ import numpy as np
 import io
 import os
 import sys
+import math
 import pandas as pd
 from typing import Any, Dict, Tuple, Optional
 
@@ -486,7 +487,23 @@ def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
 		# N33: Liquid Precipitation Depth [mm]
 		# N34: missing        
         # ---------N1 N2 N3 N4 N5 A1 N6     N7     N8     N9  N10 N11  N12  N13  N14  N15  N16    N17    N18    N19  N20   N21  N22 N23 N24 N25 N26 N27       N28 N29   N30N31 N32  N33  N34
-        out.write("{},{},{},{},60,-,{:.1f},{:.1f},{:.1f},{:d},999,9999,{:d},{:d},{:d},{:d},999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(index.year, index.month, index.day, index.hour+1, row['TMP'], row['DT'], row['RH'], int(row['PRES']), int(row['Ld']*1000/3.6), int(row['DSWRF_est']*1000/3.6), int(row['DN_est']*1000/3.6), int(row['SH_est']*1000/3.6), int(row['w_dir']), row['w_spd'], row['APCP01']))
+        out.write("{},{},{},{},60,-,{:.1f},{:.1f},{:.1f},{:d},999,9999,{:d},{:d},{:d},{:d},999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(
+            index.year,
+            index.month,
+            index.day,
+            index.hour+1,
+            row['TMP'],
+            row['DT'],
+            row['RH'],
+            int(row['PRES']),
+            int(row['Ld']*1000/3.6),
+            int(row['DSWRF_est']*1000/3.6),
+            int(row['DN_est']*1000/3.6),
+            int(row['SH_est']*1000/3.6) if row['SH_est'] != None and math.isnan(row['SH_est']) == False else 0,
+            int(row['w_dir']),
+            row['w_spd'],
+            row['APCP01']
+        ))
 
 
 def main():
