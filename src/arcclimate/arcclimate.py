@@ -417,8 +417,23 @@ def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
 
     Note:
       "EnergyPlus Auxilary Programs"を参考に記述されました。
-      外気温(単位:℃)、風向(単位:°)、風速(単位:m/s)、降水量の積算値(単位:mm/h)のみを出力します。
-      それ以外の値については、"missing"に該当する値を出力します。
+        下の値を出力します。それ以外の値については、"missing"に該当する値を出力します。
+        - N1: Year
+        - N2: Month
+        - N3: Day
+        - N4: Hour
+        - N5: Minute
+        - N6: Dry Bulb Temperature [C]
+        - N7: Dew Point Temperature [C]
+        - N8: Relative Humidity [%]
+        - N9: Atmospheric Station Pressure [Pa]
+        - N13: Horizontal Infrared Radiation from Sky [Wh/m2]
+        - N14: Global Horizontal Radiation [Wh/m2]
+        - N15: Direct Normal Radiation [Wh/m2]
+        - N16: Diffuse Horizontal Radiation [Wh/m2]
+        - N20: Wind Direction [degrees]
+        - N21: Wind Speed [m/s]
+        - N33: Liquid Precipitation Depth [mm/h]
     """   
 
     # LOCATION
@@ -451,19 +466,27 @@ def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
     out.write("DATA PERIODS,1,1,Data,Sunday,1/1,12/31\n")
 
     for index, row in df.iterrows():
-        # N1: 年
-        # N2: 月
-        # N3: 日
-        # N4: 時
-        # N5: 分 = 0
-        # N6: Dry Bulb Temperature
-        # N7-N19: missing
-        # N20: w_dir
-        # N21: w_spd
-        # N22-N32: missing
-        # N33: APCP01
-        # N34: missing
-        out.write("{},{},{},{},60,-,{:.1f},99.9,999,999999,999,9999,9999,9999,9999,9999,999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(index.year, index.month, index.day, index.hour+1, row['TMP'], int(row['w_dir']), row['w_spd'], row['APCP01']))
+		# N1: 年
+		# N2: 月
+		# N3: 日
+		# N4: 時
+		# N5: 分 = 0
+		# N6: Dry Bulb Temperature [deg C]
+		# N7: Dew Point Temperature [deg C]
+		# N8: Relative Humidity [%]
+		# N9: Atmospheric Station Pressure [Pa]
+		# N10-N11: missing
+		# N12: Horizontal Infrared Radiation from Sky [Wh/m2]
+		# N13: Global Horizontal Radiation [Wh/m2]
+		# N14: Direct Normal Radiation [Wh/m2]
+		# N15: Diffuse Horizontal Radiation [Wh/m2]
+		# N20: Wind Direction [degree]
+		# N21: Wind Speed [m/s]
+		# N22-N32: missing
+		# N33: Liquid Precipitation Depth [mm]
+		# N34: missing        
+        # ---------N1 N2 N3 N4 N5 A1 N6     N7     N8     N9  N10 N11  N12  N13  N14  N15  N16    N17    N18    N19  N20   N21  N22 N23 N24 N25 N26 N27       N28 N29   N30N31 N32  N33  N34
+        out.write("{},{},{},{},60,-,{:.1f},{:.1f},{:.1f},{:d},999,9999,{:d},{:d},{:d},{:d},999999,999999,999999,9999,{:d},{:.1f},99,99,9999,99999,9,999999999,999,0.999,999,99,999,{:.1f},99\n".format(index.year, index.month, index.day, index.hour+1, row['TMP'], row['DT'], row['RH'], int(row['PRES']), int(row['Ld']*1000/3.6), int(row['DSWRF_est']*1000/3.6), int(row['DN_est']*1000/3.6), int(row['SH_est']*1000/3.6), int(row['w_dir']), row['w_spd'], row['APCP01']))
 
 
 def main():
@@ -591,7 +614,7 @@ def main():
     # 保存
     out = io.StringIO()
     if args.f == "CSV":
-        df_save.to_csv(out, line_terminator='\n')
+        df_save.to_csv(out, lineterminator='\n')
     elif args.f == "EPW":
         to_epw(df_save, out, args.lat, args.lon)
     elif args.f == "HAS":
