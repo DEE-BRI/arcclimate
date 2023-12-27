@@ -51,7 +51,7 @@ The results are saved in `weather.csv`.
 6. Ld ... Hourly integrated value of downward atmospheric radiation before the reference time (unit: MJ/m2)
 7. VGRD ... North-south component (V-axis) of wind speed (unit: m/s)
 8. UGRD ... East-west component (U-axis) of wind speed (unit: m/s)
-9. PRES ... Atmospheric pressure (unit: hPa)
+9. PRES ... Atmospheric pressure (unit: Pa)
 10. APCP01 ... Hourly integrated value of precipitation before the reference time (unit: mm/h)
 11. w_spd ... Instantaneous value of wind speed at the reference time (unit: m/s)
 12. w_dir ... Instantaneous value of wind direction at the reference time (unit: °)
