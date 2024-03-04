@@ -1,3 +1,3 @@
-from arcclimate.arcclimate import interpolate
+from arcclimate.arcclimate import arcclimate
 
-__all__ = ['interpolate']
+__all__ = ['arcclimate']

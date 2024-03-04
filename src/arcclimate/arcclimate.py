@@ -506,6 +506,69 @@ def to_epw(df: pd.DataFrame, out: io.StringIO, lat: float, lon: float):
         ))
 
 
+def arcclimate(
+        lat: float,
+        lon: float,
+        out = None,
+        start_year: int = 2011,
+        end_year: int = 2020,
+        mode: str = 'normal',
+        format: str = 'CSV',
+        mode_elevation: str = 'api',
+        use_est: bool = False,
+        msm_file_dir: str = '.{0}.msm_cache{0}'.format(os.sep),
+        mode_separate: str = 'Perez'
+):
+    # MSMフォルダの作成
+    os.makedirs(msm_file_dir, exist_ok=True)
+
+    # 初期化
+    conf = init(
+        lat=lat,
+        lon=lon,
+        path_MSM_ele=os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "data", "MSM_elevation.csv")),
+        path_mesh_ele=os.path.abspath(os.path.join(
+            os.path.dirname(__file__), "data", "mesh_3d_elevation.csv")),
+        msm_file_dir=msm_file_dir
+    )
+
+    # 補間処理
+    df_save = interpolate(
+        lat=lat,
+        lon=lon,
+        start_year=start_year,
+        end_year=end_year,
+        msm_elevation_master=conf['df_msm_ele'],
+        mesh_elevation_master=conf['df_mesh_ele'],
+        msms=conf['df_msm_list'],
+        mode=mode,
+        mode_elevation=mode_elevation,
+        use_est=use_est,
+        vector_wind=True,
+        mode_separate=mode_separate
+    )
+
+    # 保存
+    strout = io.StringIO()
+    if format == "CSV":
+        df_save.to_csv(strout, lineterminator='\n')
+    elif format == "EPW":
+        to_epw(df_save, strout, lat, lon)
+    elif format == "HAS":
+        to_has(df_save, strout)
+    else:
+        raise ValueError(format)
+
+
+    if out is None:
+        return strout.getvalue()
+    else:
+        with open(out, mode='w') as f:
+            print(strout.getvalue(), file=f)
+        return None
+
+
 def main():
     # コマンドライン引数の処理
     parser = argparse.ArgumentParser()
@@ -583,20 +646,6 @@ def main():
     log_level = getattr(logging, args.log.upper(), None)
     logging.basicConfig(level=log_level)
 
-    # MSMフォルダの作成
-    os.makedirs(args.msm_file_dir, exist_ok=True)
-
-    # 初期化
-    conf = init(
-        lat=args.lat,
-        lon=args.lon,
-        path_MSM_ele=os.path.abspath(os.path.join(
-            os.path.dirname(__file__), "data", "MSM_elevation.csv")),
-        path_mesh_ele=os.path.abspath(os.path.join(
-            os.path.dirname(__file__), "data", "mesh_3d_elevation.csv")),
-        msm_file_dir=args.msm_file_dir
-    )
-
     # EA方式かつ日射量の推計値を使用しない場合に開始年が2018年以上となっているか確認
     if args.mode == "EA":
         if args.disable_est:
@@ -612,39 +661,22 @@ def main():
         else:
             args.use_est = True
 
-    # 補間処理
-    df_save = interpolate(
+    out = arcclimate(
         lat=args.lat,
         lon=args.lon,
+        out=args.o,
         start_year=args.start_year,
         end_year=args.end_year,
-        msm_elevation_master=conf['df_msm_ele'],
-        mesh_elevation_master=conf['df_mesh_ele'],
-        msms=conf['df_msm_list'],
         mode=args.mode,
+        format=args.f,
         mode_elevation=args.mode_elevation,
         use_est=not args.disable_est,
         vector_wind=True,
         mode_separate=args.mode_separate
     )
 
-    # 保存
-    out = io.StringIO()
-    if args.f == "CSV":
-        df_save.to_csv(out, lineterminator='\n')
-    elif args.f == "EPW":
-        to_epw(df_save, out, args.lat, args.lon)
-    elif args.f == "HAS":
-        to_has(df_save, out)
-
-    if args.out is None:
-        print(out.getvalue())
-    else:
-        logging.info('CSV保存: {}'.format(args.out))
-        with open(args.out, mode='w') as f:
-            print(out.getvalue(), file=f)
-
-    logging.info('計算が終了しました')
+    if args.o is None:
+        print(out)
 
 
 if __name__ == '__main__':
