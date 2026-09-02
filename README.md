@@ -1,5 +1,14 @@
 # ArcClimate
 
+## Notice: Migration to the Go version
+
+This repository (the Python implementation) is **no longer updated as of Ver 1.0.6**.
+From Ver 1.1.0 onward, the Go implementation, [ArcClimate (Golang version)](https://github.com/DEE-BRI/arcclimate-go), is the main implementation.
+
+In Ver 1.1.0, the period of the available meteorological data has been **extended from 10 years (January 1, 2011 to December 31, 2020) to 15 years (January 1, 2011 to December 31, 2025)**.
+If you need the 15-year data, please consider using the Go version.
+This repository (the Python version) generates data for the 10-year period only, as before.
+
 ArcClimate (hereafter referred to as "AC") is a program that creates a design meteorological data set for any specified point, such as temperature, humidity, horizontal surface all-sky radiation, downward atmospheric radiation, wind direction and wind speed, necessary for estimating the heat load of a building, based on the mesoscale numerical prediction model (hereafter referred to as "MSM") produced by the Japan Meteorological Agency, by applying elevation correction and spatial interpolation.
 
 AC automatically downloads the data necessary to create a specified arbitrary point from data that has been pre-calculated and stored in the cloud (hereinafter referred to as "basic data set"), and creates a design meteorological data set for an arbitrary point by performing spatial interpolation calculations on these data.
